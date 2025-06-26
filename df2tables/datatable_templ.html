@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css"
+      integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls"
+      crossorigin="anonymous"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DataFrame</title>
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+      integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8="
+      crossorigin="anonymous"
+    ></script>
+    <link
+      href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+    <style>
+      <style > .dataTables_wrapper {
+        margin-top: 20px;
+      }
+      td.dt-nowrap {
+        white-space: nowrap;
+      }
+      table.dataTable.display tbody td {
+        white-space: nowrap;
+      }
+      table.dataTable.display tbody td span {
+ 
+       float: right;
+      }
+      .dt-info {
+        padding: 1em;
+        font-size: 10pt;
+        color: gray;
+      }
+    </style>
+  </head>
+  <body>
+    <!--[minumum_content-->
+    <div class="pure-g">
+      <div class="pure-u-23-24">
+        <div id="tabcnt" style="width: fit-content; margin-left: 1em">
+          <p>
+            <!--[title-->
+            Example datatable
+            <!--title]-->
+          </p>
+
+          <table
+            id="pd_datatab"
+            class="display compact hover"
+            style="font-size: 10pt"
+          ></table>
+        </div>
+      </div>
+      <script type="text/javascript">
+        function _anyNumber(a) {
+          var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
+          if (typeof a === "string") {
+            a = a.replace(",", ".").replace(" ", "").match(reg);
+            a = a !== null ? parseFloat(a[0]) : Number.POSITIVE_INFINITY;
+          }
+          return a;
+        }
+
+        jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+          "num-html-pre": function (a) {
+            var x = String(a).replace(/<[\s\S]*?>/g, "");
+            return parseFloat(_anyNumber(x));
+          },
+
+          "num-html-asc": function (a, b) {
+            return a < b ? -1 : a > b ? 1 : 0;
+          },
+
+          "num-html-desc": function (a, b) {
+            return a < b ? 1 : a > b ? -1 : 0;
+          },
+        });
+        const render_num = (data, type) => {
+          const number = DataTable.render.number(" ", ",", 2).display(data);
+          
+          if (type !== "display") return number;
+          
+          const color = data < 0 ? "red" : "black";
+          return `<span style="color:${color}">${number}</span>`;
+        };
+        $(document).ready(function () {
+          const table = $("#pd_datatab").DataTable({
+            data: data,
+            autoWidth: true,
+            columns: columns,
+            pageLength: 600,
+            responsive: true,
+            layout: {
+              topStart: {
+                search: {
+                  placeholder: "Search",
+                },
+              },
+              topEnd: "info",
+            },
+            order: [],
+            language: {
+              search: "Filter:",
+            },
+            initComplete: function () {
+              // Add a note about searchable columns
+              const searchableColumns = search_columns;
+              const searchNote = $("<p>")
+                .css({
+                  "margin-bottom": "10px",
+                  "font-size": "0.7em",
+                  color: "#666",
+                })
+                .text(
+                  "Search is enabled for text columns: " +
+                    searchableColumns.join(", "),
+                );
+
+              $("#pd_datatab_wrapper").prepend(searchNote);
+            },
+          });
+        });
+
+        const data =
+          /*[tab_data*/
+          [
+            ["2025-06-22T10:26:53.635125", 0.09, 2.11, -0.33, -1000, "a"],
+            [
+              "Lorem ipsum dolor sit amet, consectetur adipiscing",
+              -0.59,
+              1,
+              1.0,
+              1,
+              "B",
+            ],
+            ["<b>Integer</b> laoreet odio et.", 0.2, 9, -9.0, 2, "c"],
+            [NaN, -0.49, 8, 4.0, 3, "D"],
+            [" class 'datetime.datetime' ", -0.18, 7, 2.0, 4, "e"],
+            [
+              " function simple. locals . lambda  at 0x7847f6b207c0 ",
+              -0.8,
+              4,
+              3.0,
+              5,
+              "F",
+            ],
+            ["C", -0.52, true, 1111.11, 70000, "X   "],
+          ];
+        /*tab_data]*/
+
+        const columns =
+          /*[tab_columns*/
+          [
+            { title: "col1", searchable: true },
+            {
+              title: "col2",
+              searchable: false,
+              render: render_num,
+              type: "num-html",
+            },
+            { title: "col3", searchable: true },
+            {
+              title: "col4",
+              searchable: false,
+              render: render_num,
+              type: "num-html",
+            },
+            {
+              title: "col5",
+              searchable: false,
+              render: render_num,
+              type: "num-html",
+            },
+            { title: "col6", searchable: true },
+          ];
+        /*tab_columns]*/
+
+        const search_columns = /*[search_columns*/ ["col1"];
+        /*search_columns]*/
+      </script>
+    </div>
+    <!--minumum_content]-->
+  </body>
+</html>
