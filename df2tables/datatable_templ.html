@@ -10,9 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>DataFrame</title>
     <script
-      src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
-      integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8="
-      crossorigin="anonymous"
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
     ></script>
     <link
       href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css"
@@ -41,7 +39,7 @@
     </style>
   </head>
   <body>
-    <!--[minumum_content-->
+    <!--[min_content-->
     <div class="pure-g">
       <div class="pure-u-23-24">
         <div id="tabcnt" style="width: fit-content; margin-left: 1em">
@@ -95,8 +93,9 @@
             data: data,
             autoWidth: true,
             columns: columns,
-            pageLength: 600,
+            pageLength: 100,
             responsive: true,
+            scrollX: true,
             layout: {
               topStart: {
                 search: {
@@ -186,6 +185,6 @@
         /*search_columns]*/
       </script>
     </div>
-    <!--minumum_content]-->
+    <!--min_content]-->
   </body>
 </html>
