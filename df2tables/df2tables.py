@@ -14,15 +14,15 @@ try:
     from importlib import resources
     TEMPLATE_PATH = str(resources.files("df2tables").joinpath(TEMPLATE_FILE))
 except ImportError:
-    print('error')
+    print('import error')
     TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), TEMPLATE_FILE)
 
 try:
-    from .comnt import render, write_from_template
+    from .comnt import render as c_render
 except ImportError:
-    from comnt import render, write_from_template
+    from comnt import render as c_render
 
-__all__ = ["TEMPLATE_PATH", "sample_df", "to_html"]
+__all__ = ["TEMPLATE_PATH", "sample_df", "render"]
 
 
 def open_file(filename):
@@ -58,20 +58,20 @@ class DataJSONEncoder(json.JSONEncoder):
             return repr(obj).replace("<", " ").replace(">", " ")
 
 
-def to_html(df,
-            outfile,
-            title="Title",
-            precision=2,
-            html_cols=[],
-            startfile=True,
-            templ_path=TEMPLATE_PATH,
-            render_str=False):
+def render(df,
+           title="Title",
+           precision=2,
+           num_html=[],
+           to_file=None,
+           startfile=True,
+           templ_path=TEMPLATE_PATH):
+    
     if "MultiIndex" in repr(df.columns):  # experimental
         df.columns = ["_".join(x) for x in df.columns]
 
     assert isinstance(df, pd.DataFrame)
 
-    missing_cols = set(html_cols).difference(df.columns)
+    missing_cols = set(num_html).difference(df.columns)
     if missing_cols:
         raise AssertionError(f"column(s): {missing_cols} not found in dataframe")
 
@@ -98,13 +98,13 @@ def to_html(df,
     for i, col in enumerate(df.columns):
         is_text = i in str_col_indices
         col_def = {"title": col, "searchable": is_text}
-        if col in html_cols:
+        if col in num_html:
             col_def["render"] = "#render_num"
             col_def["type"] = "num-html"
         columns.append(col_def)
 
     columns_json = json.dumps(columns)
-    if html_cols:
+    if num_html:
         #  we need properly refer to javascript function - json can have string so get rid of the quotes
         columns_json = columns_json.replace('"#render_num"', "render_num")
 
@@ -116,14 +116,17 @@ def to_html(df,
         "tab_columns": columns_json,
         "search_columns": search_cols_json,
     }
-    if render_str:
-        with open(templ_path, encoding="utf-8") as op_file:
-            instr = op_file.read()
-            return render(instr, template_vars)
+    with open(templ_path, encoding="utf-8") as op_file:
+        instr = op_file.read()
+    html = c_render(instr, template_vars)
+    if not to_file:
+        return html
     else:
-        write_from_template(templ_path, outfile, template_vars)
+        assert templ_path != to_file and templ_path not in to_file
+        with open(to_file, "w", encoding="utf8") as outfile:
+            outfile.write(html)
         if startfile:
-            open_file(outfile)
+            open_file(to_file)
         return outfile
 
 
@@ -148,13 +151,12 @@ def sample_df():
     })
 
     outfile = "df_table.html"
-    result = to_html(df,
-                     outfile=outfile,
-                     title="Example dataframe",
-                     html_cols=["col5", "col4", "col2"],
-                     render_str=True)
+    result = render(df,
+                    to_file=None,
+                    title="Example dataframe",
+                    num_html=["col5", "col4", "col2"])
     return result
 
 
 if __name__ == "__main__":
-    print(sample_df())
+    sample_df()
