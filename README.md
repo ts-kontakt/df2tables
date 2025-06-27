@@ -91,7 +91,7 @@ MIT License
 Offline Usage
 *Note: "Offline" viewing assumes internet connectivity for CDN resources (DataTables, jQuery, PureCSS). For truly offline usage, modify the template to reference local copies of these libraries instead of CDN links.
 
-Templates use [comnt](https://github.com/ts-kontakt/comnt), a minimal markup system based on HTML comments:
+Templates use [comnt](https://github.com/ts-kontakt/comnt), a minimal markup system based on HTML/js comments.
 
 ```html
 <!--[title-->
@@ -100,5 +100,6 @@ My Table Title
 
 const data = /*[tab_data*/ [...] /*tab_data]*/;
 ```
+While comnt is used to ensure that the html template works independently, it is still possible to place other types of templates, e.g. nijna, and render the final content
 
 Copy and modify `datatable_templ.html` to apply custom styling or libraries, then pass the new template path to `templ_path`.
