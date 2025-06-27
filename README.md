@@ -13,6 +13,13 @@ Useful for data inspection, feature engineering workflows, and sharing results, 
 - Easy customizable HTML (minimal template system using [comnt](https://github.com/ts-kontakt/comnt) included)
 - **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
 
+## Screenshots
+A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large data locally (something you don't usually do on a server). 
+Below is an example of 100k rows with additional html rendering.
+
+<p align="left">
+<img src="df2tables-big.gif"   width="650" style="max-width: 100%;max-height: 100%;">
+</p>
 
 ## Quick Start
 
