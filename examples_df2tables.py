@@ -10,6 +10,7 @@ import df2tables as df2t
 
 
 def random_data(num_rows=100):
+
     def get_rdylgn_colors(num_colors=100):
         cmap = matplotlib.colormaps["YlGnBu"]
         color_indices = np.linspace(0, 1, num_colors)
@@ -21,8 +22,7 @@ def random_data(num_rows=100):
 
             fstyle = "color:white;" if cnt > half else ""
             colors.append(
-                f"<code style='{fstyle}background-color:{hex_color}'>{hex_color}</code>"
-            )
+                f"<code style='width:100%;{fstyle}background-color:{hex_color}'>{hex_color}</code>")
         return colors
 
     unicode_ranges = [
@@ -57,30 +57,34 @@ def random_data(num_rows=100):
     colors = get_rdylgn_colors(num_rows)
     for i in range(num_rows):
         row = [
-            # random.choice(words),
+            random.choice(words),
             random.randint(100, 100000),
             random.uniform(-10, 10),
             random.uniform(-1, 1),
             get_random_unicode_char(),
             random.choice([True, False]),
             str(gen_datetime()),
-            # colors[i],
+            colors[i],
         ]
         result.append(row)
     columns = [f"col{i}" for i in range(len(result[0]))]
     df = pd.DataFrame(result, columns=columns)
 
+    import sys
+    sys_info = f'<br><small style="color:gray">{sys.platform}</small>'
+
     outfile = "rnd_table2.html"
     df2t.render(
         df,
         to_file=outfile,
-        title=f"Example Diverse Random Data <b>{num_rows} rows</b>!",
+        title=f"Example Diverse Random Data <b>{num_rows} rows</b>! {sys_info}",
         num_html=["col1", "col2"],
     )
     return result
 
 
 def pkg_test():
+
     def get_packages():
         try:
             import pkg_resources
@@ -89,7 +93,7 @@ def pkg_test():
             dists = sorted(dists, key=lambda x: x[0].lower())
         except ModuleNotFoundError:
             print("Error loading module pkg_resources - using random data")
-            dists = generate_random_data(num_rows=100)
+            dists = random_data(num_rows=100)
         return dists
 
     header_list = ["name        ", "ver  ", "full package path"]
