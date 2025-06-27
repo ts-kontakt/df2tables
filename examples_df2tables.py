@@ -51,31 +51,31 @@ def random_data(num_rows=100):
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis at ipsum ut ex venenatis tempor. Cras fermentum metus nec massa viverra cursus. Integer pretium massa non mauris tincidunt, at porttitor massa pretium. Nulla vel felis justo. Pellentesque vel eros nec metus varius laoreet. Mauris accumsan ornare pellentesque. Maecenas gravida urna mollis gravida iaculis. Aenean a nunc vel sapien tempor scelerisque. Donec vitae hendrerit enim.
     Integer in aliquet urna, sit amet vestibulum ante. Aliquam vitae convallis ante. Donec ut arcu et lacus condimentum maximus eget quis nunc. Sed eu ornare justo. Suspendisse ligula tellus, condimentum quis vulputate quis, ornare id enim. Pellentesque at ante mattis felis pulvinar aliquet ut at urna. Nunc a libero ac sem posuere tempor eget et nisi. Maecenas nunc purus, consequat eu faucibus at, volutpat vitae nunc. Pellentesque quis odio magna. Mauris suscipit a tortor et volutpat. Nam id ex quis ligula ultricies iaculis vitae sit amet nisl. Curabitur et mauris vel sem congue imperdiet sed sit amet orci.
     """
-    words = list(set(lorem_ipsum_text.split(" ")))
+    words = list(set(map(lambda x: x.strip(), lorem_ipsum_text.split(" "))))
 
     result = []
     colors = get_rdylgn_colors(num_rows)
     for i in range(num_rows):
         row = [
-            random.choice(words),
+            # random.choice(words),
             random.randint(100, 100000),
             random.uniform(-10, 10),
             random.uniform(-1, 1),
             get_random_unicode_char(),
             random.choice([True, False]),
             str(gen_datetime()),
-            colors[i],
+            # colors[i],
         ]
         result.append(row)
     columns = [f"col{i}" for i in range(len(result[0]))]
     df = pd.DataFrame(result, columns=columns)
 
     outfile = "rnd_table2.html"
-    df2t.to_html(
+    df2t.render(
         df,
-        outfile=outfile,
-        title="Example Diverse Random Data",
-        html_cols=["col1", "col2"],
+        to_file=outfile,
+        title=f"Example Diverse Random Data <b>{num_rows} rows</b>!",
+        num_html=["col1", "col2"],
     )
     return result
 
@@ -96,8 +96,9 @@ def pkg_test():
     df = pd.DataFrame(get_packages(), columns=header_list)
 
     outfile = "pkg_table.html"
-    df2t.to_html(df, outfile=outfile)
+    df2t.render(df, to_file=outfile)
 
 
 if __name__ == "__main__":
-    random_data(1000)
+    # pkg_test()
+    random_data(100_00)
