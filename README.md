@@ -7,7 +7,7 @@ Useful for data inspection, feature engineering workflows, and sharing results, 
 ## Features
 
 - Converts `pandas.DataFrame` to interactive standalone HTML tables
-- You can browse quite large data sets using filters and sorting
+- You can browse **quite large data sets** using filters and sorting
 - Self-contained HTML files with embedded data—no external dependencies at runtime
 - Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
 - Color-coded formatting for numeric columns with customizable precision
@@ -21,6 +21,12 @@ Below is an example of 100k rows with additional html rendering.
 <p align="left">
 <img src="df2tables-big.gif"   width="650" style="max-width: 100%;max-height: 100%;">
 </p>
+
+## Installation
+
+```bash
+pip install df2tables
+```
 
 ## Quick Start
 
@@ -125,11 +131,7 @@ df2t.render(
 - pandas
 - numpy
 
-## Installation
 
-```bash
-pip install df2tables
-```
 
 ## License
 
