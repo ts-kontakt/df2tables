@@ -7,14 +7,15 @@ Useful for data inspection, feature engineering workflows, and sharing results, 
 ## Features
 
 - Converts `pandas.DataFrame` to interactive standalone HTML tables
+- You can browse quite large data sets using filters and sorting
 - Self-contained HTML files with embedded data—no external dependencies at runtime
 - Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
 - Color-coded formatting for numeric columns with customizable precision
-- Easy customizable HTML (minimal template system using [comnt](https://github.com/ts-kontakt/comnt) included)
 - **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
-
+- Easy customizable HTML 
 ## Screenshots
 A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large data locally (something you don't usually do on a server). 
+(By default, filtering is enabled for all non-numeric columns)
 Below is an example of 100k rows with additional html rendering.
 
 <p align="left">
@@ -133,7 +134,7 @@ pip install df2tables
 ## License
 
 MIT License  
-© ts-kontakt
+© Tomasz Sługocki
 
 ## Appendix: Template Customization
 
@@ -156,7 +157,7 @@ The default HTML template includes:
 - JavaScript enhancements for sorting HTML-formatted numbers and coloring negative values
 
 
-While [comnt](https://github.com/ts-kontakt/comnt) is used to ensure that the HTML template just works independently, you can also use other templating systems like Jinja2 by rendering the final content after.
+While [comnt](https://github.com/ts-kontakt/comnt) is used to ensure that the HTML template just works independently (and avoid Json.parse), you can also use other templating systems like Jinja2 by rendering the final content after.
 
 ### Custom Templates
 
