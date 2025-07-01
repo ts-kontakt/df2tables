@@ -25,11 +25,10 @@ def random_data(num_rows=100):
                 f"<code style='width:100%;{fstyle}background-color:{hex_color}'>{hex_color}</code>")
         return colors
 
-    unicode_ranges = [
-        (0x0020, 0x007E),  # Basic Latin (printable ASCII)
-        (0x00A0, 0x00FF),  # Latin-1 Supplement (e.g., accented characters)
-        (0x0100, 0x017F),  # Latin Extended-A (more European characters)
-    ]
+    healthcare = ["Low priority", "Medium priority", "High priority", "Emergency"]
+    credit_ratings = ["Excellent", "Good", "Average", "Fair", "Poor"]
+    job = ["Senior", "Mid-level", "Junior", "Entry-level"]
+    product = ["Premium", "Standard", "Budget"]
 
     def gen_datetime(min_year=1990, max_year=datetime.now().year):
         # generate a datetime in format yyyy-mm-dd hh:mm:ss.000000
@@ -38,20 +37,11 @@ def random_data(num_rows=100):
         end = start + timedelta(days=365 * years)
         return start + (end - start) * random.random()
 
-    def get_random_unicode_char():
-        """Get a random Unicode character from various language ranges."""
-        range_start, range_end = random.choice(unicode_ranges)
-        code_point = random.randint(range_start, range_end)
-        try:
-            return chr(code_point)
-        except ValueError:
-            return chr(random.randint(0x00C0, 0x00FF))
-
     lorem_ipsum_text = """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis at ipsum ut ex venenatis tempor. Cras fermentum metus nec massa viverra cursus. Integer pretium massa non mauris tincidunt, at porttitor massa pretium. Nulla vel felis justo. Pellentesque vel eros nec metus varius laoreet. Mauris accumsan ornare pellentesque. Maecenas gravida urna mollis gravida iaculis. Aenean a nunc vel sapien tempor scelerisque. Donec vitae hendrerit enim.
     Integer in aliquet urna, sit amet vestibulum ante. Aliquam vitae convallis ante. Donec ut arcu et lacus condimentum maximus eget quis nunc. Sed eu ornare justo. Suspendisse ligula tellus, condimentum quis vulputate quis, ornare id enim. Pellentesque at ante mattis felis pulvinar aliquet ut at urna. Nunc a libero ac sem posuere tempor eget et nisi. Maecenas nunc purus, consequat eu faucibus at, volutpat vitae nunc. Pellentesque quis odio magna. Mauris suscipit a tortor et volutpat. Nam id ex quis ligula ultricies iaculis vitae sit amet nisl. Curabitur et mauris vel sem congue imperdiet sed sit amet orci.
     """
-    words = list(set(map(lambda x: x.strip(), lorem_ipsum_text.split(" "))))
+    words = [x for x in set(map(lambda x: x.strip(), lorem_ipsum_text.split(" "))) if len(x) > 3]
 
     result = []
     colors = get_rdylgn_colors(num_rows)
@@ -61,11 +51,15 @@ def random_data(num_rows=100):
             random.randint(100, 100000),
             random.uniform(-10, 10),
             random.uniform(-1, 1),
-            get_random_unicode_char(),
-            random.choice([True, False]),
+            random.choice(healthcare),
+            random.choice(job),
+            random.choice(product),
+            random.choice(credit_ratings),
+            repr(random.choice([True, False])),
             str(gen_datetime()),
             colors[i],
         ]
+    
         result.append(row)
     columns = [f"col{i}" for i in range(len(result[0]))]
     df = pd.DataFrame(result, columns=columns)
@@ -104,5 +98,6 @@ def pkg_test():
 
 
 if __name__ == "__main__":
+    # testitables()
     # pkg_test()
-    random_data(100_00)
+    random_data(50000)
