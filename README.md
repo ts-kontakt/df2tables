@@ -2,7 +2,7 @@
 
 `df2tables` is a Python utility for exporting `pandas.DataFrame` objects to interactive HTML tables using [DataTables](https://datatables.net/)—an excellent JavaScript library for table functionality. It generates standalone `.html` files viewable in any browser without Jupyter notebooks, servers, or frameworks.
 
-Useful for data inspection, feature engineering workflows, and sharing results, especially with large datasets that need interactive exploration.
+Useful for data inspection, feature engineering workflows, especially with large datasets that need interactive exploration.
 
 ## Features
 
@@ -10,11 +10,11 @@ Useful for data inspection, feature engineering workflows, and sharing results, 
 - You can browse **quite large data sets** using filters and sorting
 - Self-contained HTML files with embedded data—no external dependencies at runtime
 - Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
-- Color-coded formatting for numeric columns with customizable precision
+- Color-coded formatting for numeric columns
 - **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
 - Easy customizable HTML 
 ## Screenshots
-A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large data locally (something you don't usually do on a server). 
+A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
 (By default, filtering is enabled for all non-numeric columns)
 Below is an example of 100k rows with additional html rendering.
 
