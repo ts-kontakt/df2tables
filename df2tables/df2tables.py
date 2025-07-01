@@ -117,7 +117,7 @@ def render(
             select_cols.append(i)  # columns when  dropdown select makes  sense
             col_def = {"title": col, "orderable": True}
         else:
-            col_def = {"title": col, "searchable": True}
+            col_def = {"title": col, "searchable": True, "orderable": True}
         if col in num_html:
             col_def["render"] = "#render_num"
             col_def["type"] = "num-html"
@@ -125,7 +125,7 @@ def render(
     column_control = [
         {
             "targets": select_cols,
-            "columnControl": [["searchList"]],
+            "columnControl": [["order", "searchList"]],
         },
         {
             "targets": list(set(range(len(df.columns))).difference(select_cols)),
