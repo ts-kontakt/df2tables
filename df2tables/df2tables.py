@@ -12,9 +12,9 @@ TEMPLATE_FILE = "datatable_templ.html"
 try:
     # python 3.9+
     from importlib import resources
+
     TEMPLATE_PATH = str(resources.files("df2tables").joinpath(TEMPLATE_FILE))
 except ImportError:
-    print('import error')
     TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), TEMPLATE_FILE)
 
 try:
@@ -41,7 +41,7 @@ class DataJSONEncoder(json.JSONEncoder):
             obj_type = str(type(obj))
             if "str" in obj_type:
                 return obj.strip()
-            elif "date" in obj_type:
+            elif "date" in obj_type or "Timestamp" in obj_type:
                 return obj.isoformat()
             elif "int" in obj_type:
                 return int(obj)
@@ -58,81 +58,117 @@ class DataJSONEncoder(json.JSONEncoder):
             return repr(obj).replace("<", " ").replace(">", " ")
 
 
-def render(df,
-           title="Title",
-           precision=2,
-           num_html=[],
-           to_file=None,
-           startfile=True,
-           templ_path=TEMPLATE_PATH):
-    
+def fix_df_columns(df):
+    for col in df.columns:
+        try:
+            test_val = (df[col].dropna().values.tolist() if not df[col].isna().all() else None)
+            json.dumps(test_val, cls=DataJSONEncoder)
+        except BaseException:
+            print(f"! column error: {col}", sys.exc_info())
+            df[col] = df[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
+    return df
+
+
+def render(
+        df,
+        title="Title",
+        precision=2,
+        num_html=[],
+        to_file=None,
+        startfile=True,
+        templ_path=TEMPLATE_PATH,
+        load_column_control=True,
+        #the maximum number of unique values in a column that qualifies it as categorical 
+        #(and therefore eligible for a dropdown filter).
+        dropdown_select_threshold=4):
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(title, str)
+    assert isinstance(load_column_control, bool)
+
     if "MultiIndex" in repr(df.columns):  # experimental
         df.columns = ["_".join(x) for x in df.columns]
-
-    assert isinstance(df, pd.DataFrame)
 
     missing_cols = set(num_html).difference(df.columns)
     if missing_cols:
         raise AssertionError(f"column(s): {missing_cols} not found in dataframe")
 
-    for col in df.columns:
-        try:
-            test_val = df[col].dropna().iloc[0] if not df[col].isna().all() else None
-            json.dumps(test_val, cls=DataJSONEncoder)
-        except BaseException:
-            print(f"! column error: {col}", sys.exc_info())
-            df[col] = df[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
-
     float_cols = df.select_dtypes(include=[np.float16, np.float32, np.float64])
-
-    df.loc[:, float_cols.columns] = np.round(float_cols, precision)
-    data_arrays = df.values.tolist()
-    data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
-
-    # Get string column indices
     str_cols = df.select_dtypes(include=["object", "string"]).columns
-    str_col_indices = [list(df.columns).index(col) for col in str_cols]
+    df.loc[:, float_cols.columns] = np.round(float_cols, precision)
 
-    # Get column names and create column definitions for DataTable
-    columns = []
+    try:
+        data_arrays = df.values.tolist()
+        data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
+    except:
+        print('Json error', sys.exc_info())
+        df = fix_df_columns(df)
+        data_arrays = df.values.tolist()
+        data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
+
+    columns, select_cols = [], []
     for i, col in enumerate(df.columns):
-        is_text = i in str_col_indices
-        col_def = {"title": col, "searchable": is_text}
+        try:
+            nunique = df[col].nunique()
+        except TypeError:
+            # for nested rows unhashable type ex: 'list'
+            df[col] = df[col].apply(lambda x: repr(x))
+            nunique = df[col].nunique()
+        if nunique <= dropdown_select_threshold:
+            select_cols.append(i)  # columns when  dropdown select makes  sense
+            col_def = {"title": col, "orderable": True}
+        else:
+            col_def = {"title": col, "searchable": True}
         if col in num_html:
             col_def["render"] = "#render_num"
             col_def["type"] = "num-html"
         columns.append(col_def)
-
+    column_control = [
+        {
+            "targets": select_cols,
+            "columnControl": [["searchList"]],
+        },
+        {
+            "targets": list(set(range(len(df.columns))).difference(select_cols)),
+            "columnControl": ["order", 'searchDropdown'],
+        },
+    ]
     columns_json = json.dumps(columns)
     if num_html:
-        #  we need properly refer to javascript function - json can have string so get rid of the quotes
+        #  we need properly refer to javascript function defined in template
+        # json must have string so get rid of the quotes
         columns_json = columns_json.replace('"#render_num"', "render_num")
 
-    search_cols_json = json.dumps(list(str_cols))
+    auto_width = True if len(df.index) < 100 else False
 
     template_vars = {
-        "title": title,
+        "title": str(title),
+        "auto_width": json.dumps(auto_width),
         "tab_data": data_json,
         "tab_columns": columns_json,
-        "search_columns": search_cols_json,
+        "search_columns": json.dumps(list(str_cols)),
+        "select_cols": json.dumps(select_cols),
+        "column_control": json.dumps(column_control),
+        "load_column_control": json.dumps(load_column_control),
     }
     with open(templ_path, encoding="utf-8") as op_file:
         instr = op_file.read()
     html = c_render(instr, template_vars)
     if not to_file:
         return html
-    else:
-        assert templ_path != to_file and templ_path not in to_file
-        with open(to_file, "w", encoding="utf8") as outfile:
-            outfile.write(html)
-        if startfile:
-            open_file(to_file)
-        return outfile
+    assert templ_path != to_file and templ_path not in to_file
+    with open(to_file, "w", encoding="utf8") as outfile:
+        outfile.write(html)
+    if startfile:
+        open_file(to_file)
+    return outfile
 
 
-def sample_df():
+def sample_df(startfile=True):
     import datetime
-
+    import random
+    healthcare = ["Low priority", "Medium priority", "High priority", "Emergency"]
+    product = ["Premium", "Standard", "Budget"]
+    grades = ["A", "B", "C", "D", "F"]
     df = pd.DataFrame({
         "col1": [
             datetime.datetime.now(),
@@ -144,17 +180,23 @@ def sample_df():
             "C",
         ],
         "col2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
-        "col3": [2.11, 1, 9, 8, 7, 4, True],
+        "col3": [random.choice(grades) for x in range(7)],
+        # "col3": [["ZZ","AA"], {'BB' : 1, 'BB' : 2}, "CC", "CC","CC", "ZZ", "ZZ"], #error rows
         "col4": [-0.333, 1, -9, 4, 2, 3, 1111.111],
         "col5": [-1000, 1, 2, 3, 4, 5, 70_000],
-        "col6": ["a", "B", "c", "D", "e", "F", "X   "],
+        "col6": [random.choice(product) for x in range(7)],
+        "col7": ["1", "0", "1", "0", "1", "0", "0"],
+        "col8": [-1, 1, 2, 1, 1, 0, 0],
+        "col9": [random.choice(healthcare) for x in range(7)],
     })
 
     outfile = "df_table.html"
     result = render(df,
-                    to_file=None,
+                    to_file=outfile,
                     title="Example dataframe",
-                    num_html=["col5", "col4", "col2"])
+                    num_html=["col5", "col4", "col2"],
+                    load_column_control=True,
+                    startfile=startfile)
     return result
 
 
