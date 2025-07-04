@@ -4,6 +4,20 @@
 
 Useful for data inspection, feature engineering workflows, especially with large datasets that need interactive exploration.
 
+## Installation
+
+```bash
+pip install df2tables
+```
+
+## Screenshots
+A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
+The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
+(By default, filtering is enabled for all non-numeric columns)
+Below is an example of 100k rows with additional html rendering.
+
+![df2tables demo with 100k rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
+
 ## Features
 
 - Converts `pandas.DataFrame` to interactive standalone HTML tables
@@ -13,24 +27,9 @@ Useful for data inspection, feature engineering workflows, especially with large
 - Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
 - Color-coded formatting for numeric columns
 - **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
+- **Minimal HTML snippet generation**: Generate embeddable HTML content for Flask, Django, or other web frameworks
 - Easy customizable HTML 
 - **Smart column detection**: Automatically identifies categorical columns (≤4 unique values) for dropdown filtering
-
-## Screenshots
-A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
-The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
-(By default, filtering is enabled for all non-numeric columns)
-Below is an example of 100k rows with additional html rendering.
-
-<p align="left">
-<img src="https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif"   width="650" style="max-width: 100%;max-height: 100%;">
-</p>
-
-## Installation
-
-```bash
-pip install df2tables
-```
 
 ## Quick Start
 
@@ -55,7 +54,7 @@ df2t.render(
 )
 ```
 
-## Main Function
+## Main Functions
 
 ### render
 
@@ -68,7 +67,8 @@ df2t.render(
     to_file: Optional[str] = None,
     startfile: bool = True,
     templ_path: str = TEMPLATE_PATH,
-    load_column_control: bool = True
+    load_column_control: bool = True,
+    dropdown_select_threshold: int = 4
 ) -> Union[str, file_object]
 ```
 
@@ -81,16 +81,55 @@ df2t.render(
 - `startfile`: If True, automatically opens the generated HTML file in default browser
 - `templ_path`: Path to custom HTML template (uses default if not specified)
 - `load_column_control`: If True, smartly integrates the exceptional [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) programmatically for enhanced filtering and search capabilities (default: True)
+- `dropdown_select_threshold`: Maximum number of unique values in a column to qualify for dropdown filtering (default: 4)
 
 **Returns:**
 - HTML string if `to_file=None`
 - File object if `to_file` is specified
 
+### render_inline
+
+```python
+df2t.render_inline(
+    df: pd.DataFrame,
+    **kwargs
+) -> str
+```
+
+Generates minimal HTML content suitable for embedding in Flask, Django, or other web framework templates. This function:
+- Returns only the table markup and JavaScript data bindings
+- Excludes full HTML document structure (no `<html>`, `<head>`, `<body>` tags)
+- Dynamically loads all external dependencies (jQuery, DataTables, ColumnControl, styles) via JavaScript
+- Perfect for embedding interactive data previews in existing web applications
+
+**Parameters:**
+- Same as `render()` except `to_file` is not allowed (always returns string)
+
+**Example:**
+```python
+# Generate embeddable HTML snippet
+html_snippet = df2t.render_inline(
+    df,
+    title="Dashboard Data",
+    load_column_control=True
+)
+
+# Use in Flask template
+from flask import render_template_string
+template = """
+<div class="container">
+    <h1>My Dashboard</h1>
+    {{ table_html|safe }}
+</div>
+"""
+return render_template_string(template, table_html=html_snippet)
+```
+
 ### DataTables Column Control Extension Integration
 
 The `load_column_control` parameter enables smart integration with the remarkable [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/), bringing professional-grade filtering capabilities to your data tables:
 
-- **Categorical columns** (≤4 unique values): Get elegant dropdown select filters for intuitive data filtering
+- **Categorical columns** (≤`dropdown_select_threshold` unique values): Get elegant dropdown select filters for intuitive data filtering
 - **Text/numeric columns**: Benefit from sophisticated search dropdown functionality and ordering controls
 - **Intelligent detection**: The module automatically identifies column types and applies the most appropriate Column Control features
 - **Seamless loading**: The outstanding [Column Control extension](https://datatables.net/extensions/columncontrol/) is loaded dynamically via JavaScript, ensuring optimal performance and compatibility
@@ -101,14 +140,19 @@ df2t.render(df, load_column_control=True, to_file="enhanced_table.html")
 
 # Disable Column Control for simpler tables
 df2t.render(df, load_column_control=False, to_file="simple_table.html")
+
+# Customize dropdown threshold
+df2t.render(df, dropdown_select_threshold=10, to_file="custom_table.html")
 ```
 
-### sample_df
-
-Generates and renders a built-in example DataFrame for testing:
+### get_sample_df / render_sample_df
 
 ```python
-html_string = df2t.sample_df()
+# Get sample DataFrame for testing
+sample_df = df2t.get_sample_df()
+
+# Generate and render sample DataFrame
+html_string = df2t.render_sample_df(to_file="sample_table.html")
 ```
 
 ## Fast Dataset Browsing
@@ -159,7 +203,94 @@ print("Generated HTML files. Open them manually to browse datasets.")
 - **Portable**: Share HTML files easily with colleagues for collaborative data exploration
 - **No memory constraints**: Unlike Jupyter notebooks, these files don't consume Python memory after generation
 
+## Web Framework Integration
 
+The `render_inline()` function makes it incredibly easy to embed interactive DataTables in web applications. **No complex setup required** - just generate the HTML snippet and embed it in your template with the necessary CDN links.
+
+### Minimal Flask Example
+
+Here's a complete, working Flask application that demonstrates how effortlessly you can embed a DataTable with 10,000 rows:
+
+```python
+import df2tables as df2t
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    # Generate sample data (or use your own DataFrame)
+    df = df2t.get_sample_df()
+    # For larger datasets, you might use:
+    # df = generate_large_dataframe(10000)  # Your data source
+    
+    df_title = "DataFrame Rendered as DataTable inline in <strong>Flask</strong>"
+    
+    # Generate the embeddable DataTable HTML
+    string_datatable = df2t.render_inline(
+        df,
+        title=df_title,
+        dropdown_select_threshold=40,
+        load_column_control=True,
+    )
+    
+    # Embed in a simple HTML template
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <head>
+            <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+            <link href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" rel="stylesheet">
+            <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+            <title>Flask Rendered Page</title>
+        </head>
+        <body style="background-color: #f4f4f4;">
+            <div style="background-color: #fff; padding: 20px;">
+                <h1>My Flask Data Dashboard</h1>
+                {{ inline_datatable | safe }}
+            </div>
+        </body>
+        </html>
+        """,
+        inline_datatable=string_datatable,
+    )
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+**Key advantages of this approach:**
+
+- **Zero configuration**: No need to set up static files or complex DataTables initialization
+- **Instant interactivity**: Full DataTables functionality with sorting, filtering, and pagination
+- **Scalable**: Handles large datasets (10k+ rows) smoothly in the browser
+- **Smart filtering**: Automatic dropdown filters for categorical columns
+- **Self-contained**: The `render_inline()` function includes all necessary JavaScript and data
+- **Easy embedding**: Just include the CDN links and embed the generated HTML
+
+### Advanced Flask Example
+
+### Django Example
+```python
+# views.py
+from django.shortcuts import render
+import df2tables as df2t
+
+def data_view(request):
+    df = get_your_dataframe()
+    table_html = df2t.render_inline(df, title="Dashboard Data")
+    return render(request, 'dashboard.html', {'table_html': table_html})
+```
+
+```html
+<!-- templates/dashboard.html -->
+<div class="container">
+    <h1>Data Dashboard</h1>
+    {{ table_html|safe }}
+</div>
+```
+
+## Requirements
 
 - Python 3.7+
 - pandas
@@ -171,19 +302,10 @@ print("Generated HTML files. Open them manually to browse datasets.")
 
 The module smartly integrates with the exceptional [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) for optimal user experience:
 
-- **Select columns**: Columns with ≤4 unique values get sophisticated dropdown filters (`searchList`) via Column Control
+- **Select columns**: Columns with ≤`dropdown_select_threshold` unique values get sophisticated dropdown filters (`searchList`) via Column Control
 - **Search columns**: Other columns benefit from Column Control's advanced search functionality and ordering controls
 - **Dynamic loading**: The [Column Control extension](https://datatables.net/extensions/columncontrol/) JavaScript libraries are loaded programmatically to maintain clean templates
 - **Robust fallback**: If the Column Control extension cannot be loaded, tables gracefully fall back to standard DataTables functionality
-
-## TODO
-
-- Support rendering a minimal HTML snippet (instead of full document) suitable for inclusion in Flask or Jinja2 templates:
-  - The resulting string would only contain the table markup and JS data bindings.
-  - All external dependencies (jQuery, DataTables, ColumnControl, styles) would be loaded dynamically via JavaScript, as is already supported by `load_column_control=True`.
-  - Ideal for embedding data previews or interactive tables directly into existing web apps.
-
-
 
 ### Error Handling
 
@@ -247,6 +369,9 @@ Copy and modify `datatable_templ.html` to apply custom styling or libraries, the
 # Return HTML string for further processing
 html_content = df2t.render(df, to_file=None)
 
+# Generate minimal HTML for embedding
+html_snippet = df2t.render_inline(df, title="Embedded Table")
+
 # Use custom template
 df2t.render(
     df,
@@ -259,6 +384,13 @@ df2t.render(
     df,
     to_file="basic_table.html",
     load_column_control=False
+)
+
+# Adjust dropdown threshold for categorical columns
+df2t.render(
+    df,
+    dropdown_select_threshold=10,  # Columns with ≤10 unique values get dropdowns
+    to_file="custom_filtering.html"
 )
 
 # Handle MultiIndex columns (experimental)
