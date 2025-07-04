@@ -7,6 +7,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+from functools import partial
 
 TEMPLATE_FILE = "datatable_templ.html"
 try:
@@ -18,11 +19,13 @@ except ImportError:
     TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), TEMPLATE_FILE)
 
 try:
+    from .comnt import get_tag_content
     from .comnt import render as c_render
 except ImportError:
+    from comnt import get_tag_content
     from comnt import render as c_render
 
-__all__ = ["TEMPLATE_PATH", "sample_df", "render"]
+__all__ = ["TEMPLATE_PATH", "render", "render_inline", "render_sample_df", "get_sample_df"]
 
 
 def open_file(filename):
@@ -70,17 +73,17 @@ def fix_df_columns(df):
 
 
 def render(
-        df,
-        title="Title",
-        precision=2,
-        num_html=[],
-        to_file=None,
-        startfile=True,
-        templ_path=TEMPLATE_PATH,
-        load_column_control=True,
-        #the maximum number of unique values in a column that qualifies it as categorical 
-        #(and therefore eligible for a dropdown filter).
-        dropdown_select_threshold=4):
+    df,
+    title="Title",
+    precision=2,
+    num_html=[],
+    to_file=None,
+    startfile=True,
+    templ_path=TEMPLATE_PATH,
+    load_column_control=True,
+    #the maximum number of unique values in a column that qualifies it as categorical
+    #(and therefore eligible for a dropdown filter).
+    dropdown_select_threshold=4):
     assert isinstance(df, pd.DataFrame)
     assert isinstance(title, str)
     assert isinstance(load_column_control, bool)
@@ -100,7 +103,7 @@ def render(
         data_arrays = df.values.tolist()
         data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
     except:
-        print('Json error', sys.exc_info())
+        print(' json error', sys.exc_info())
         df = fix_df_columns(df)
         data_arrays = df.values.tolist()
         data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
@@ -113,7 +116,7 @@ def render(
             # for nested rows unhashable type ex: 'list'
             df[col] = df[col].apply(lambda x: repr(x))
             nunique = df[col].nunique()
-        if nunique <= dropdown_select_threshold:
+        if nunique < dropdown_select_threshold:
             select_cols.append(i)  # columns when  dropdown select makes  sense
             col_def = {"title": col, "orderable": True}
         else:
@@ -132,6 +135,10 @@ def render(
             "columnControl": ["order", 'searchDropdown'],
         },
     ]
+
+    # print(column_control)
+    # x
+
     columns_json = json.dumps(columns)
     if num_html:
         #  we need properly refer to javascript function defined in template
@@ -162,21 +169,31 @@ def render(
         open_file(to_file)
     return outfile
 
+_render_str = partial(render, to_file=None)
 
-def sample_df(startfile=True):
+def render_inline(df, **kwargs):
+    if 'to_file' in kwargs:
+        print(f"wrong argument:[to_file] {kwargs.pop('to_file')} is not allowed in render_inline")
+        # del kwargs['to_file']
+    html = _render_str(df, **kwargs)
+    min_content = c_render(get_tag_content('min_content', html), {'render_inline': 'true'})
+    return min_content
+
+
+def get_sample_df():
     import datetime
     import random
     healthcare = ["Low priority", "Medium priority", "High priority", "Emergency"]
     product = ["Premium", "Standard", "Budget"]
     grades = ["A", "B", "C", "D", "F"]
-    df = pd.DataFrame({
+    return pd.DataFrame({
         "col1": [
             datetime.datetime.now(),
             "Lorem ipsum dolor sit amet, consectetur adipiscing",
             "<b>Integer</b> laoreet odio et.",
             np.nan,
             datetime.datetime,
-            lambda x: 1 / x,
+            0,  # lambda x: 1 / x,
             "C",
         ],
         "col2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
@@ -190,15 +207,17 @@ def sample_df(startfile=True):
         "col9": [random.choice(healthcare) for x in range(7)],
     })
 
-    outfile = "df_table.html"
+
+def render_sample_df(to_file="df_table.html"):
+    df = get_sample_df()
     result = render(df,
-                    to_file=outfile,
+                    to_file=to_file,
                     title="Example dataframe",
                     num_html=["col5", "col4", "col2"],
                     load_column_control=True,
-                    startfile=startfile)
+                    dropdown_select_threshold=5)
     return result
 
 
 if __name__ == "__main__":
-    sample_df()
+    print(render_sample_df(to_file='1test.html'))

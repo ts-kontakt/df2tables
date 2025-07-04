@@ -89,7 +89,7 @@ def _render_block(text, tag_id, val=None):
     return "\n".join((prefix, val, suffix))
 
 
-def get_tag_content(instr, tag):
+def get_tag_content(tag, instr):
     assert len(instr) > len(tag) and tag + instr
     return _render_block(instr, tag, None)
 

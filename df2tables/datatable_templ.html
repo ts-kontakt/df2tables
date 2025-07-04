@@ -17,9 +17,6 @@ DataFrame
 rel="stylesheet">
 <script src=
 "https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-<link href=
-"https://cdn.datatables.net/columncontrol/1.0.6/css/columnControl.dataTables.css"
-rel="stylesheet">
 <style>
       <style > .dataTables_wrapper {
         margin-top: 20px;
@@ -240,6 +237,9 @@ true
             load_next(0);
           };
 
+          const render_inline = /*[render_inline*/ true /*render_inline]*/;
+
+
           const load_column_control = /*[load_column_control*/ true;
           /*load_column_control]*/ 
           
@@ -248,6 +248,14 @@ true
             "https://cdn.datatables.net/columncontrol/1.0.6/js/columnControl.dataTables.js",
             //~           "https://cdn.datatables.net/Xcolumncontrol/1.0.6/js/columnControl.dataTables.xjs",
           ];
+          const jquery_js = "https://code.jquery.com/jquery-3.7.1.min.js"
+//~           const datatable_js = 'https://cdn.datatables.net/2.3.2/js/dataTables.min.js'
+//~           if (render_inline) {
+//~                 columncontrol_js.unshift( datatable_js)
+//~             }
+//~          
+        
+          
 
           const columncontrol_css =
             "https://cdn.datatables.net/columncontrol/1.0.6/css/columnControl.dataTables.css";
@@ -272,6 +280,7 @@ true
           });
         })();
 </script>
+<!--min_content]-->
 <figure class="dtlogo">
 <img src=
 "https://upload.wikimedia.org/wikipedia/commons/a/a4/Datatables_logo_square.png"
@@ -282,7 +291,7 @@ width="20" style=
 "https://datatables.net">DataTables.net</a></small>
 </figcaption>
 </figure>
-<!--min_content]-->
+
 </div>
 </body>
 </html>
