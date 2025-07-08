@@ -106,38 +106,78 @@ Generates minimal HTML content suitable for embedding in Flask or other web fram
 **Parameters:**
 - Same as `render()` except `to_file` is not allowed (always returns string)
 
-**Example:**
-```python
-# Generate embeddable HTML snippet
-html_snippet = df2t.render_inline(
-    df,
-    title="Dashboard Data",
-    load_column_control=True
-)
+## Web Framework Integration
 
-# Use in Flask template
-from flask import render_template_string
-template = """
-<!DOCTYPE html>
-<html>
-<head>
-    <!-- Required: jQuery must be loaded first -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+The `render_inline()` function makes it easy to embed interactive DataTables in web applications. **Important**: You must include the required JavaScript libraries (jQuery, DataTables) in your host page as `render_inline()` does not automatically include them.
+
+### Complete Flask Example
+
+Here's a complete, **working** Flask application that demonstrates how to properly embed a DataTable with all required dependencies:
+
+```python
+import df2tables as df2t
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    # Generate sample data (or use your own DataFrame)
+    df = df2t.get_sample_df()
+    # For larger datasets, you might use:
+    # df = generate_large_dataframe(10000)  # Your data source
     
-    <!-- Required: DataTables CSS and JS -->
-    <link href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-</head>
-<body>
-    <div class="container">
-        <h1>My Dashboard</h1>
-        {{ table_html|safe }}
-    </div>
-</body>
-</html>
-"""
-return render_template_string(template, table_html=html_snippet)
+    df_title = "DataFrame Rendered as DataTable inline in <strong>Flask</strong>"
+    
+    # Generate the embeddable DataTable HTML
+    string_datatable = df2t.render_inline(
+        df,
+        title=df_title,
+        dropdown_select_threshold=5,
+        load_column_control=True,
+    )
+    
+    # Embed in a complete HTML template with all required dependencies
+    return render_template_string(
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Flask Data Dashboard</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            
+            <!-- Required: jQuery must be loaded first -->
+            <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+            
+            <!-- Required: DataTables CSS and JS -->
+            <link href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" rel="stylesheet">
+            <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+            
+            <!-- Optional: PureCSS for styling -->
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css">
+        </head>
+        <body style="background-color: #f4f4f4;">
+            <div style="background-color: #fff; padding: 20px; margin: 20px;">
+                <h1>My Flask Data Dashboard</h1>
+                {{ inline_datatable | safe }}
+            </div>
+        </body>
+        </html>
+        """,
+        inline_datatable=string_datatable,
+    )
+
+if __name__ == "__main__":
+    app.run(debug=True)
 ```
+
+**Key points for web framework integration:**
+
+- **Required dependencies**: Always include jQuery and DataTables CSS/JS in your host page
+- **Column Control**: When `load_column_control=True`, the extension is loaded automatically by the generated JavaScript
+- **Self-contained data**: The `render_inline()` function includes all table data and initialization code
+- **Smart filtering**: Automatic dropdown filters for categorical columns
+
 
 ### DataTables Column Control Extension Integration
 
@@ -215,80 +255,7 @@ print("Generated HTML files. Open them manually to browse datasets.")
 - **Interactive filtering**: The [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) enables quick data exploration
 - **Offline browsing**: Generated files work completely offline
 - **Portable**: Share HTML files easily with colleagues for collaborative data exploration
-- **No memory constraints**: Unlike Jupyter notebooks, these files don't consume Python memory after generation
 
-## Web Framework Integration
-
-The `render_inline()` function makes it easy to embed interactive DataTables in web applications. **Important**: You must include the required JavaScript libraries (jQuery, DataTables) in your host page as `render_inline()` does not automatically include them.
-
-### Complete Flask Example
-
-Here's a complete, working Flask application that demonstrates how to properly embed a DataTable with all required dependencies:
-
-```python
-import df2tables as df2t
-from flask import Flask, render_template_string
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    # Generate sample data (or use your own DataFrame)
-    df = df2t.get_sample_df()
-    # For larger datasets, you might use:
-    # df = generate_large_dataframe(10000)  # Your data source
-    
-    df_title = "DataFrame Rendered as DataTable inline in <strong>Flask</strong>"
-    
-    # Generate the embeddable DataTable HTML
-    string_datatable = df2t.render_inline(
-        df,
-        title=df_title,
-        dropdown_select_threshold=40,
-        load_column_control=True,
-    )
-    
-    # Embed in a complete HTML template with all required dependencies
-    return render_template_string(
-        """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Flask Data Dashboard</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            
-            <!-- Required: jQuery must be loaded first -->
-            <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-            
-            <!-- Required: DataTables CSS and JS -->
-            <link href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" rel="stylesheet">
-            <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-            
-            <!-- Optional: PureCSS for styling -->
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css">
-        </head>
-        <body style="background-color: #f4f4f4;">
-            <div style="background-color: #fff; padding: 20px; margin: 20px;">
-                <h1>My Flask Data Dashboard</h1>
-                {{ inline_datatable | safe }}
-            </div>
-        </body>
-        </html>
-        """,
-        inline_datatable=string_datatable,
-    )
-
-if __name__ == "__main__":
-    app.run(debug=True)
-```
-
-**Key points for web framework integration:**
-
-- **Required dependencies**: Always include jQuery and DataTables CSS/JS in your host page
-- **Load order**: jQuery must be loaded before DataTables
-- **Column Control**: When `load_column_control=True`, the extension is loaded automatically by the generated JavaScript
-- **Self-contained data**: The `render_inline()` function includes all table data and initialization code
-- **Smart filtering**: Automatic dropdown filters for categorical columns
 
 ## Requirements
 
@@ -309,7 +276,7 @@ The module smartly integrates with the exceptional [DataTables Column Control ex
 
 ### Error Handling
 
-The module includes robust error handling for:
+The module includes  error handling for:
 - **JSON serialization**: Custom encoder handles complex pandas data types
 - **Column compatibility**: Automatically converts problematic column types to string representation
 - **Missing columns**: Validates `num_html` column names against DataFrame columns
