@@ -217,8 +217,10 @@ One of the key strengths of `df2tables` is its ability to quickly generate inter
 
 For exploratory data analysis across multiple datasets, you can generate tables programmatically. The example below uses the [vega_datasets](https://github.com/altair-viz/vega_datasets) package, which provides easy access to a variety of sample datasets commonly used in data visualization and analysis.
 
-**Note**: Install vega_datasets with `pip install vega_datasets` to run this example.
 
+
+**Note**: Install vega_datasets with `pip install vega_datasets` to run this example.
+### Quick browse first 10 vega datasets
 ```python
 import df2tables as df2t
 from vega_datasets import data
@@ -226,7 +228,7 @@ from vega_datasets import data
 # WARNING: This will open many browser tabs! Use with caution.
 # Consider setting startfile=False for bulk processing.
 
-for dataset_name in sorted(dir(data)):
+for dataset_name in (sorted(dir(data))[:10]):
     dataset_func = getattr(data, dataset_name)
     try:
         df = dataset_func()
@@ -239,7 +241,7 @@ for dataset_name in sorted(dir(data)):
                 df, 
                 title=f'Dataset: {dataset_name}',
                 to_file=f'{dataset_name}.html',
-                startfile=False  # Prevent opening all files automatically
+                startfile=True  
             )
     except Exception as e:
         print(f'Error processing {dataset_name}: {e}')
