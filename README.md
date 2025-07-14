@@ -106,6 +106,16 @@ Generates minimal HTML content suitable for embedding in Flask or other web fram
 **Parameters:**
 - Same as `render()` except `to_file` is not allowed (always returns string)
 
+### Column Name Formatting
+
+For better readability in table headers, `df2tables` automatically converts underscores to spaces in column names when the column name is longer than 20 characters and contains underscores. This improves word wrapping and prevents excessively wide columns.
+To disable this automatic word wrapping behavior, add the following CSS to your custom template:
+```css
+span.dt-column-title { 
+    white-space: nowrap; 
+}
+```
+
 ## Web Framework Integration
 
 The `render_inline()` function makes it easy to embed interactive DataTables in web applications. **Important**: You must include the required JavaScript libraries (jQuery, DataTables) in your host page as `render_inline()` does not automatically include them.
