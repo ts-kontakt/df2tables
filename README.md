@@ -33,6 +33,8 @@ Below is an example of 1 million rows with additional html rendering.
 - **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
 
 ## Quick Start
+The simplest function call with default arguments is  ```df2tables.render(df, to_file='df.html')```
+
 
 ```python
 import pandas as pd
@@ -54,6 +56,7 @@ df2t.render(
     startfile=True
 )
 ```
+Dataframe indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call ```df2tables.render(df.reset_index(), args...```
 
 ## Main Functions
 
