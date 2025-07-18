@@ -4,6 +4,13 @@
 
 Useful for data inspection, feature engineering workflows, especially with large datasets that need interactive exploration.
 
+## Quick Start
+The simplest function call with default arguments is:  
+```python
+df2tables.render(df, to_file='df.html')
+```
+
+
 ## Installation
 
 ```bash
@@ -31,9 +38,6 @@ Below is an example of 1 million rows with additional html rendering.
 - **Minimal HTML snippet generation**: Generate embeddable HTML content for Flask or other web frameworks
 - Easy customizable HTML 
 - **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
-
-## Quick Start
-The simplest function call with default arguments is  ```df2tables.render(df, to_file='df.html')```
 
 
 ```python
