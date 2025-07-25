@@ -1,8 +1,22 @@
 # df2tables: Pandas DataFrames to Interactive DataTables
 
-`df2tables` is a Python utility for exporting `pandas.DataFrame` objects to interactive HTML tables using [DataTables](https://datatables.net/)—an excellent JavaScript library for table functionality. It generates standalone `.html` files viewable in any browser without Jupyter notebooks, servers, or frameworks.
+`df2tables` is a Python utility for exporting `pandas.DataFrame` objects to interactive HTML tables using [DataTables](https://datatables.net/)—an excellent JavaScript library for table functionality. 
+## Features
+- Converts `pandas.DataFrame` to interactive standalone HTML tables
+- You can browse **quite large data sets** using filters and sorting
+- No need to export to Excel—you can explore and filter your data directly in the browser, which is faster and more convenient
+- Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
+- **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
+- **Minimal HTML snippet generation**: Generate embeddable HTML content for Flask or other web frameworks
+- **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
 
-Useful for data inspection, feature engineering workflows, especially with large datasets that need interactive exploration.
+## Screenshots
+Below is an example of 1 million rows with additional html rendering.
+![df2tables demo with 1 000 000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
+
+A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
+The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
+(By default, filtering is enabled for all non-numeric columns)
 
 ## Quick Start
 The simplest function call with default arguments is:  
@@ -10,36 +24,11 @@ The simplest function call with default arguments is:
 df2tables.render(df, to_file='df.html')
 ```
 
-
 ## Installation
 
 ```bash
 pip install df2tables
 ```
-
-## Screenshots
-A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
-The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
-(By default, filtering is enabled for all non-numeric columns)
-
-Below is an example of 1 million rows with additional html rendering.
-
-![df2tables demo with 1 000 000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
-
-## Features
-
-- Converts `pandas.DataFrame` to interactive standalone HTML tables
-- You can browse **quite large data sets** using filters and sorting
-- **DataTables Column Control integration**: Smartly leverages the powerful [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) for automatic dropdown filters and advanced search functionality, loaded programmatically via JavaScript
-- Self-contained HTML files with embedded data—no external dependencies at runtime
-- Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
-- Color-coded formatting for numeric columns
-- **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
-- **Minimal HTML snippet generation**: Generate embeddable HTML content for Flask or other web frameworks
-- Easy customizable HTML 
-- **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
-
-
 ```python
 import pandas as pd
 import df2tables as df2t
@@ -122,6 +111,46 @@ span.dt-column-title {
     white-space: nowrap; 
 }
 ```
+## Fast Dataset Browsing
+One of the key strengths of `df2tables` is its ability to quickly generate interactive HTML tables for rapid dataset exploration. The combination of standalone HTML files and the [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) makes it exceptionally fast to browse through multiple datasets.
+
+### Bulk Dataset Processing
+
+For exploratory data analysis across multiple datasets, you can generate tables programmatically. The example below uses the [vega_datasets](https://github.com/altair-viz/vega_datasets) package, which provides easy access to a variety of sample datasets commonly used in data visualization and analysis.
+
+
+**Note**: Install vega_datasets with `pip install vega_datasets` to run this example.
+### Quick browse first 10 vega datasets
+```python
+import df2tables as df2t
+from vega_datasets import data
+
+# WARNING: This will open many browser tabs! Use with caution.
+# Consider setting startfile=False for bulk processing.
+
+for dataset_name in (sorted(dir(data))[:10]):
+    dataset_func = getattr(data, dataset_name)
+    try:
+        df = dataset_func()
+        print(f"{dataset_name}: {len(df.index)} rows")
+        
+        # df2tables can handle datasets above 100k rows, but we limit to smaller datasets 
+        # for this demo to avoid generating too many large files
+        if len(df.index) < 100_000:
+            df2t.render(
+                df, 
+                title=f'Dataset: {dataset_name}',
+                to_file=f'{dataset_name}.html',
+                startfile=True  
+            )
+    except Exception as e:
+        print(f'Error processing {dataset_name}: {e}')
+
+print("Generated HTML files. Open them manually to browse datasets.")
+```
+
+**⚠️ Important Note**: When `startfile=True` (default), each generated HTML file opens automatically in your default browser. For bulk processing, set `startfile=False` to avoid opening dozens of browser tabs simultaneously.
+
 
 ## Web Framework Integration
 
@@ -224,57 +253,6 @@ sample_df = df2t.get_sample_df()
 
 # Generate and render sample DataFrame
 html_string = df2t.render_sample_df(to_file="sample_table.html")
-```
-
-## Fast Dataset Browsing
-
-One of the key strengths of `df2tables` is its ability to quickly generate interactive HTML tables for rapid dataset exploration. The combination of standalone HTML files and the [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) makes it exceptionally fast to browse through multiple datasets.
-
-### Bulk Dataset Processing
-
-For exploratory data analysis across multiple datasets, you can generate tables programmatically. The example below uses the [vega_datasets](https://github.com/altair-viz/vega_datasets) package, which provides easy access to a variety of sample datasets commonly used in data visualization and analysis.
-
-
-
-**Note**: Install vega_datasets with `pip install vega_datasets` to run this example.
-### Quick browse first 10 vega datasets
-```python
-import df2tables as df2t
-from vega_datasets import data
-
-# WARNING: This will open many browser tabs! Use with caution.
-# Consider setting startfile=False for bulk processing.
-
-for dataset_name in (sorted(dir(data))[:10]):
-    dataset_func = getattr(data, dataset_name)
-    try:
-        df = dataset_func()
-        print(f"{dataset_name}: {len(df.index)} rows")
-        
-        # df2tables can handle datasets above 100k rows, but we limit to smaller datasets 
-        # for this demo to avoid generating too many large files
-        if len(df.index) < 100_000:
-            df2t.render(
-                df, 
-                title=f'Dataset: {dataset_name}',
-                to_file=f'{dataset_name}.html',
-                startfile=True  
-            )
-    except Exception as e:
-        print(f'Error processing {dataset_name}: {e}')
-
-print("Generated HTML files. Open them manually to browse datasets.")
-```
-
-**⚠️ Important Note**: When `startfile=True` (default), each generated HTML file opens automatically in your default browser. For bulk processing, set `startfile=False` to avoid opening dozens of browser tabs simultaneously.
-
-### Benefits for Fast Browsing
-
-- **Instant loading**: HTML files with embedded data load immediately without server dependencies
-- **Interactive filtering**: The [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) enables quick data exploration
-- **Offline browsing**: Generated files work completely offline
-- **Portable**: Share HTML files easily with colleagues for collaborative data exploration
-
 
 ## Requirements
 
