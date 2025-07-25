@@ -11,21 +11,17 @@
 - **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
 
 ## Screenshots
-Below is an example of 1 million rows with additional html rendering.
 ![df2tables demo with 1 000 000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
-
 A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
 The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
 (By default, filtering is enabled for all non-numeric columns)
-
 ## Quick Start
 The simplest function call with default arguments is:  
 ```python
 df2tables.render(df, to_file='df.html')
 ```
-
 ## Installation
-
+Example use
 ```bash
 pip install df2tables
 ```
