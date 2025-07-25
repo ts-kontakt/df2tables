@@ -1,5 +1,8 @@
 # df2tables: Pandas DataFrames to Interactive DataTables
 
+[![Downloads](https://img.shields.io/pypi/dm/df2tables.svg)](https://pypi.org/project/df2tables/) [![PyPI version](https://img.shields.io/pypi/v/df2tables.svg)](https://pypi.org/project/df2tables/)
+
+
 `df2tables` is a Python utility for exporting `pandas.DataFrame` objects to interactive HTML tables using [DataTables](https://datatables.net/)—an excellent JavaScript library for table functionality. 
 ## Features
 - Converts `pandas.DataFrame` to interactive standalone HTML tables
@@ -11,7 +14,7 @@
 - **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
 
 ## Screenshots
-![df2tables demo with 1 000 000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
+![df2tables demo with 1 000 000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true) 
 A standalone html file containing a js array as data source for datatables has several advantages, e.g. you can browse quite large datasets locally (something you don't usually do on a server). 
 The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
 (By default, filtering is enabled for all non-numeric columns)
