@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from functools import partial
+import math
 
 import numpy as np
 import pandas as pd
@@ -52,6 +53,8 @@ class DataJSONEncoder(json.JSONEncoder):
             obj_type = str(type(obj))
             if "str" in obj_type:
                 return obj.strip()
+            elif 'nan' in repr(obj).lower():
+                return None  
             elif "date" in obj_type or "Timestamp" in obj_type:
                 return obj.isoformat()
             elif "int" in obj_type:
@@ -81,7 +84,14 @@ def fix_df_columns(df):
             df[col] = df[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
     return df
 
-
+def to_none(val):
+    try:
+        if math.isnan(val):
+            return None
+    except TypeError:
+        return val
+    return val
+    
 def render(
     df,
     title="Title",
@@ -111,8 +121,10 @@ def render(
     df.loc[:, float_cols.columns] = np.round(float_cols, precision)
 
     try:
-        data_arrays = df.values.tolist()
+        # data_arrays = df.values.tolist()
+        data_arrays = [list(map(to_none, row)) for row in df.values.tolist()]
         data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
+        
     except:
         print(" json error", sys.exc_info())
         df = fix_df_columns(df)
@@ -127,6 +139,10 @@ def render(
             # for nested rows unhashable type ex: 'list'
             df[col] = df[col].apply(lambda x: repr(x))
             nunique = df[col].nunique()
+        
+        if len(col) > 10 and '_' in col:
+            col = col.replace('_', ' ')
+            
         if nunique < dropdown_select_threshold:
             select_cols.append(i)  # columns when  dropdown select makes  sense
             col_def = {"title": col, "orderable": True}
@@ -208,14 +224,14 @@ def get_sample_df():
                 "<b>Integer</b> laoreet odio et.",
                 np.nan,
                 datetime.datetime,
-                0,  # lambda x: 1 / x,
+                pd.NA,  # lambda x: 1 / x,
                 "C",
             ],
             "col2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
-            "col3": [random.choice(grades) for x in range(7)],
+            "Column 3": [random.choice(grades) for x in range(7)],
             # "col3": [["ZZ","AA"], {'BB' : 1, 'BB' : 2}, "CC", "CC","CC", "ZZ", "ZZ"], #error rows
             "col4": [-0.333, 1, -9, 4, 2, 3, 1111.111],
-            "col5": [-1000, 1, 2, 3, 4, 5, 70_000],
+            "col5": [-2000, -1, 2, 3, 4, 5, 70_000],
             "col6": [random.choice(product) for x in range(7)],
             "col7": ["1", "0", "1", "0", "1", "0", "0"],
             "col8": [-1, 1, 2, 1, 1, 0, 0],
@@ -227,7 +243,7 @@ def get_sample_df():
 def render_sample_df(to_file="df_table.html"):
     df = get_sample_df()
     result = render(
-        df,
+        df.reset_index(),
         to_file=to_file,
         title="Example dataframe",
         num_html=["col5", "col4", "col2"],
