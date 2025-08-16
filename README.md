@@ -259,16 +259,6 @@ df2t.render(df, dropdown_select_threshold=10, to_file="custom_table.html")
 - pandas
 - numpy
 
-## Technical Details
-
-### DataTables Column Control Extension Integration
-
-The module smartly integrates with the exceptional [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) for optimal user experience:
-
-- **Select columns**: Columns with ≤`dropdown_select_threshold` unique values get sophisticated dropdown filters (`searchList`) via Column Control
-- **Search columns**: Other columns benefit from Column Control's advanced search functionality (`searchDropdown`) and ordering controls
-- **Dynamic loading**: The [Column Control extension](https://datatables.net/extensions/columncontrol/) JavaScript libraries are loaded programmatically to maintain clean templates
-- **Robust fallback**: If the Column Control extension cannot be loaded, tables gracefully fall back to standard DataTables functionality
 
 ### Error Handling
 
