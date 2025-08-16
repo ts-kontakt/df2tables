@@ -48,6 +48,16 @@ df2t.render(
     startfile=True
 )
 ```
+### Sample DataFrame
+
+```python
+# Get sample DataFrame for testing
+sample_df = df2t.get_sample_df()
+
+# Generate and render sample DataFrame
+html_string = df2t.render_sample_df(to_file="sample_table.html")
+```
+
 Dataframe indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call ```df2tables.render(df.reset_index(), args...```
 
 ## Main Functions
@@ -243,16 +253,6 @@ df2t.render(df, load_column_control=False, to_file="simple_table.html")
 # Customize dropdown threshold
 df2t.render(df, dropdown_select_threshold=10, to_file="custom_table.html")
 ```
-
-### get_sample_df / render_sample_df
-
-```python
-# Get sample DataFrame for testing
-sample_df = df2t.get_sample_df()
-
-# Generate and render sample DataFrame
-html_string = df2t.render_sample_df(to_file="sample_table.html")
-
 ## Requirements
 
 - Python 3.7+
