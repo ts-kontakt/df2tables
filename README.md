@@ -1,6 +1,5 @@
 # df2tables: Pandas DataFrames to Interactive DataTables
-
-[![Downloads](https://img.shields.io/pypi/dm/df2tables.svg)](https://pypi.org/project/df2tables/) [![PyPI version](https://img.shields.io/pypi/v/df2tables.svg)](https://pypi.org/project/df2tables/)
+[![PyPI version](https://img.shields.io/pypi/v/df2tables.svg)](https://pypi.org/project/df2tables/)
 
 
 `df2tables` is a Python utility for exporting `pandas.DataFrame` objects to interactive HTML tables using [DataTables](https://datatables.net/)—an excellent JavaScript library for table functionality. 
