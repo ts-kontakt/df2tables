@@ -1,2 +1,6 @@
 from .df2tables import *
-# from .comnt import render, write_from_template
+
+__author__ = "Tomasz Slugocki"
+__version__ = "0.1.1"
+__license__ = "MIT"
+VERSION = __version__

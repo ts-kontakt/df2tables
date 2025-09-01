@@ -40,7 +40,7 @@
 
     table.dataTable span.dtcc span.dtcc-button-icon {
       color: #000ee7;
-      line-height: var(--dtcc-button-icon_size);
+      --dt-row-selected-stripe-alpha: 0.99
     }
 
     :root {
@@ -67,6 +67,24 @@
     span.dt-column-title {
       white-space: wrap;
     }
+    
+    /* Default state */
+    .dt-input {
+      /*  border: 2px solid #ccc;
+        padding: 6px 10px; */
+      border-radius: 6px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    /* Highlight only when user typed something */
+    .dt-input:not(:placeholder-shown) {
+      background-color: #e0f0ff !important; /* light blue */
+      border-color: #66b2ff !important;
+      font-weight: bold;
+    }
+
+    
+    
   </style>
 </head>
 
@@ -252,6 +270,10 @@
             scrollX: false,
             order: [],
             columnDefs: cc_defs,
+           language: {
+                search: '_INPUT_',
+            searchPlaceholder: 'Search...'
+            },
             initComplete: function () {
               const searchableColumns = search_columns;
               const searchNote = $("<p>")
@@ -261,7 +283,7 @@
                   color: "#666",
                 })
                 .text(
-                  "Search is enabled for text columns: " +
+                  "General search is enabled for: " +
                   searchableColumns.join(", "),
                 );
               $("#pd_datatab_wrapper").prepend(searchNote);
@@ -360,14 +382,21 @@
       })();
     </script>
     <!--min_content]-->
-
+ <!--[datatables_logo-->
     <figure class="dtlogo">
       <img src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Datatables_logo_square.png" width="20"
         style="display: block; margin-left: auto; margin-right: auto" />
       <figcaption style="text-align: center">
         <small style="font-size: 9px"><a target="blank" href="https://datatables.net">DataTables.net</a></small>
+      
       </figcaption>
+<!--      <small><a target="blank" href="https://github.com/ts-kontakt/df2tables"></a>df2tables</small>
+ --><a href="https://pypi.org/project/df2tables/" rel="nofollow">
+ </br>
+<img src="https://camo.githubusercontent.com/f77cd9053fad02d8531586f4bfd0a7d0f9e0dca000f210fc86d65c5a81bde592/68747470733a2f2f696d672e736869656c64732e696f2f707970692f762f6466327461626c65732e737667" alt="PyPI version" data-canonical-src="https://img.shields.io/pypi/v/df2tables.svg" style="max-width: 80%;"></a>
+     
     </figure>
+    <!--datatables_logo]-->
   </div>
 </body>
 

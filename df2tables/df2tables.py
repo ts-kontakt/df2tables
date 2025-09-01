@@ -1,11 +1,11 @@
 #!/usr/bin/python
 # coding=utf8
 import json
+import math
 import os
 import subprocess
 import sys
 from functools import partial
-import math
 
 import numpy as np
 import pandas as pd
@@ -53,8 +53,8 @@ class DataJSONEncoder(json.JSONEncoder):
             obj_type = str(type(obj))
             if "str" in obj_type:
                 return obj.strip()
-            elif 'nan' in repr(obj).lower():
-                return None  
+            elif "nan" in repr(obj).lower():
+                return None
             elif "date" in obj_type or "Timestamp" in obj_type:
                 return obj.isoformat()
             elif "int" in obj_type:
@@ -84,6 +84,7 @@ def fix_df_columns(df):
             df[col] = df[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
     return df
 
+
 def to_none(val):
     try:
         if math.isnan(val):
@@ -91,26 +92,30 @@ def to_none(val):
     except TypeError:
         return val
     return val
-    
+
+
 def render(
     df,
+    to_file=None,
     title="Title",
     precision=2,
     num_html=[],
-    to_file=None,
     startfile=True,
     templ_path=TEMPLATE_PATH,
     load_column_control=True,
-    # the maximum number of unique values in a column that qualifies it as categorical
-    # (and therefore eligible for a dropdown filter).
-    dropdown_select_threshold=5,
+    dropdown_select_threshold=9,
+    display_logo=True,
 ):
+    if isinstance(df, pd.Series):
+        print("Converting Series do DataFrame...")
+        df = df.to_frame(name="col").reset_index()
     assert isinstance(df, pd.DataFrame)
     assert isinstance(title, str)
     assert isinstance(load_column_control, bool)
 
+    df.columns = df.columns.astype(str)
     if "MultiIndex" in repr(df.columns):  # experimental
-        df.columns = ["_".join(x) for x in df.columns]
+        df.columns = ["_".join(str(x)) for x in df.columns]
 
     missing_cols = set(num_html).difference(df.columns)
     if missing_cols:
@@ -124,8 +129,8 @@ def render(
         # data_arrays = df.values.tolist()
         data_arrays = [list(map(to_none, row)) for row in df.values.tolist()]
         data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
-        
-    except:
+
+    except BaseException:
         print(" json error", sys.exc_info())
         df = fix_df_columns(df)
         data_arrays = df.values.tolist()
@@ -139,15 +144,14 @@ def render(
             # for nested rows unhashable type ex: 'list'
             df[col] = df[col].apply(lambda x: repr(x))
             nunique = df[col].nunique()
-        
-        if len(col) > 10 and '_' in col:
-            col = col.replace('_', ' ')
-            
+
+        col_cleaned = col.replace("_", " ")
+
         if nunique < dropdown_select_threshold:
             select_cols.append(i)  # columns when  dropdown select makes  sense
-            col_def = {"title": col, "orderable": True}
+            col_def = {"title": col_cleaned, "orderable": True}
         else:
-            col_def = {"title": col, "searchable": True, "orderable": True}
+            col_def = {"title": col_cleaned, "searchable": True, "orderable": True}
         if col in num_html:
             col_def["render"] = "#render_num"
             col_def["type"] = "num-html"
@@ -180,12 +184,16 @@ def render(
         "column_control": json.dumps(column_control),
         "load_column_control": json.dumps(load_column_control),
     }
+    if not display_logo:
+        template_vars["datatables_logo"] = ""
+
     with open(templ_path, encoding="utf-8") as op_file:
         instr = op_file.read()
     html = c_render(instr, template_vars)
     if not to_file:
         return html
     assert templ_path != to_file and templ_path not in to_file
+    assert ".html" in to_file
     with open(to_file, "w", encoding="utf8") as outfile:
         outfile.write(html)
     if startfile:
@@ -199,7 +207,9 @@ _render_str = partial(render, to_file=None)
 def render_inline(df, **kwargs):
     if "to_file" in kwargs:
         print(
-            f"wrong argument:[to_file] {kwargs.pop('to_file')} is not allowed in render_inline"
+            f"wrong argument:[to_file] {
+                kwargs.pop('to_file')
+            } is not allowed in render_inline"
         )
         # del kwargs['to_file']
     html = _render_str(df, **kwargs)
@@ -218,7 +228,7 @@ def get_sample_df():
     grades = ["A", "B", "C", "D", "F"]
     return pd.DataFrame(
         {
-            "col1": [
+            "col_1a": [
                 datetime.datetime.now(),
                 "Lorem ipsum dolor sit amet, consectetur adipiscing",
                 "<b>Integer</b> laoreet odio et.",
@@ -227,7 +237,7 @@ def get_sample_df():
                 pd.NA,  # lambda x: 1 / x,
                 "C",
             ],
-            "col2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
+            "col_2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
             "Column 3": [random.choice(grades) for x in range(7)],
             # "col3": [["ZZ","AA"], {'BB' : 1, 'BB' : 2}, "CC", "CC","CC", "ZZ", "ZZ"], #error rows
             "col4": [-0.333, 1, -9, 4, 2, 3, 1111.111],
@@ -246,42 +256,17 @@ def render_sample_df(to_file="df_table.html"):
         df.reset_index(),
         to_file=to_file,
         title="Example dataframe",
-        num_html=["col5", "col4", "col2"],
+        num_html=["col5", "col4", "col_2"],
         load_column_control=True,
         dropdown_select_threshold=5,
+        display_logo=False,
     )
     return result
+
 
 def main():
     print(render_sample_df(to_file="1test.html"))
 
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

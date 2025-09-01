@@ -51,7 +51,7 @@ def _render_block(text, tag_id, val=None):
         start, end = ("/*", "*/") if ext == "js" else ("<!--", "-->")
         start_tag_js, start_tag_html = f"/*[{tag_id}*/", f"<!--[{tag_id}-->"
         if start_tag_js in text and start_tag_html in text:
-            raise AssertionError(f"same tag id in javascript and html is not allowed")
+            raise AssertionError(f"same tag id in javascript and html is not allowed: {tag_id}")
         start_tag = "".join((start, "[", tag_id, end))
         end_tag = "".join((start, tag_id, "]", end))
         start_cnt = len(text.split(start_tag)) - 1

@@ -1,0 +1,34 @@
+
+    <!DOCTYPE html>
+    <html>
+       <head>
+          <title>
+             Example  comnt rendered page
+            </title>
+
+       </head>
+       <body> <h3>
+           <!--[title-->
+Example rendered python object
+<!--title]--></h3>
+          <!--[content-->
+<p>Below python range rendered as javascript variable</p>
+<!--content]-->
+          <code id="data-display" style=
+             "background-color: rgb(245, 245, 245); padding: 10px; border: 1px solid rgb(221, 221, 221);">
+             </code>
+          <script>
+             // Example data array for
+             const data = /*[data_arr*/
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+/*data_arr]*/;
+
+             document.addEventListener('DOMContentLoaded', function() {
+                 // Display data array in paragraph (like Python's repr)
+                 const dataDisplay = document.getElementById('data-display');
+                 dataDisplay.textContent = JSON.stringify(data, null, 2);
+             });
+          </script>
+       </body>
+    </html>
+    
