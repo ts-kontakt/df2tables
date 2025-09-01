@@ -10,7 +10,7 @@
 - Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
 - **Useful for some training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
 - **Minimal HTML snippet generation**: Generate embeddable HTML content for Flask or other web frameworks
-- **Smart column detection**: Automatically identifies categorical columns (≤5 unique values by default) for dropdown filtering
+- **Smart column detection**: Automatically identifies categorical columns (≤9 unique values by default) for dropdown filtering
 
 ## Screenshots
 ![df2tables demo with 1 000 000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true) 
@@ -66,27 +66,29 @@ Dataframe indexes are not rendered by default. If you want to enable indexes in 
 ```python
 df2t.render(
     df: pd.DataFrame,
+    to_file: Optional[str] = None,
     title: str = "Title",
     precision: int = 2,
     num_html: List[str] = [],
-    to_file: Optional[str] = None,
     startfile: bool = True,
     templ_path: str = TEMPLATE_PATH,
     load_column_control: bool = True,
-    dropdown_select_threshold: int = 5
+    dropdown_select_threshold: int = 9,
+    display_logo: bool = True
 ) -> Union[str, file_object]
 ```
 
 **Parameters:**
 - `df`: Input pandas DataFrame
+- `to_file`: Output HTML file path. If None, returns HTML string instead of writing file
 - `title`: Title for the HTML table
 - `precision`: Number of decimal places for floating-point numbers
 - `num_html`: List of numeric column names to render with color-coded HTML formatting (negative values in red)
-- `to_file`: Output HTML file path. If None, returns HTML string instead of writing file
 - `startfile`: If True, automatically opens the generated HTML file in default browser
 - `templ_path`: Path to custom HTML template (uses default if not specified)
 - `load_column_control`: If True, smartly integrates the exceptional [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) programmatically for enhanced filtering and search capabilities (default: True)
-- `dropdown_select_threshold`: Maximum number of unique values in a column to qualify for dropdown filtering (default: 5)
+- `dropdown_select_threshold`: Maximum number of unique values in a column to qualify for dropdown filtering (default: 9)
+- `display_logo`: If True, displays DataTables logo (default: True)
 
 **Returns:**
 - HTML string if `to_file=None`
@@ -187,7 +189,7 @@ def home():
     string_datatable = df2t.render_inline(
         df,
         title=df_title,
-        dropdown_select_threshold=5,
+        dropdown_select_threshold=9,
         load_column_control=True,
     )
     
@@ -261,7 +263,7 @@ df2t.render(df, dropdown_select_threshold=10, to_file="custom_table.html")
 
 ### Error Handling
 
-The module includes  error handling for:
+The module includes error handling for:
 - **JSON serialization**: Custom encoder handles complex pandas data types
 - **Column compatibility**: Automatically converts problematic column types to string representation
 - **Missing columns**: Validates `num_html` column names against DataFrame columns
@@ -350,6 +352,13 @@ df2t.render(
     df,
     dropdown_select_threshold=10,  # Columns with ≤10 unique values get dropdowns
     to_file="custom_filtering.html"
+)
+
+# Control logo display
+df2t.render(
+    df,
+    to_file="no_logo_table.html",
+    display_logo=False
 )
 
 # Handle MultiIndex columns (experimental)
