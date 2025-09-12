@@ -202,13 +202,12 @@ def home():
             <title>Flask Data Dashboard</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             
-            <!-- Required: jQuery must be loaded first -->
             <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-            
-            <!-- Required: DataTables CSS and JS -->
-            <link href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" rel="stylesheet">
-            <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-            
+            <link href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css" rel="stylesheet">
+            <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script><!--[column_control-->
+            <link href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css" rel="stylesheet">
+            <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script><!--column_control]-->
+
             <!-- Optional: PureCSS for styling -->
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css">
         </head>
@@ -230,9 +229,7 @@ if __name__ == "__main__":
 **Key points for web framework integration:**
 
 - **Required dependencies**: Always include jQuery and DataTables CSS/JS in your host page
-- **Column Control**: When `load_column_control=True`, the extension is loaded automatically by the generated JavaScript
 - **Self-contained data**: The `render_inline()` function includes all table data and initialization code
-- **Smart filtering**: Automatic dropdown filters for categorical columns
 
 
 ### DataTables Column Control Extension Integration
@@ -242,11 +239,8 @@ The `load_column_control` parameter enables smart integration with the remarkabl
 - **Categorical columns** (≤`dropdown_select_threshold` unique values): Get elegant dropdown select filters (`searchList`) for intuitive data filtering
 - **Text/numeric columns**: Benefit from sophisticated search functionality (`searchDropdown`) and ordering controls
 - **Intelligent detection**: The module automatically identifies column types and applies the most appropriate Column Control features
-- **Seamless loading**: The outstanding [Column Control extension](https://datatables.net/extensions/columncontrol/) is loaded dynamically via JavaScript, ensuring optimal performance and compatibility
 
 ```python
-# Enable smart integration with DataTables Column Control extension (default)
-df2t.render(df, load_column_control=True, to_file="enhanced_table.html")
 
 # Disable Column Control for simpler tables
 df2t.render(df, load_column_control=False, to_file="simple_table.html")
@@ -364,3 +358,6 @@ df2t.render(
 # Handle MultiIndex columns (experimental)
 # MultiIndex columns are automatically flattened with underscore separation
 ```
+
+### Licence
+MIT
