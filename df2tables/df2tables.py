@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from functools import partial
+from html import escape
 
 import numpy as np
 import pandas as pd
@@ -69,7 +70,18 @@ class DataJSONEncoder(json.JSONEncoder):
         except BaseException:
             print("json error: ", repr(obj), sys.exc_info()[1])
             # Fallback to string representation for any problematic objects
-            return repr(obj).replace("<", " ").replace(">", " ")
+            return escape(repr(obj))
+
+
+def html_tag(tag, content="", attrs=None, self_closing=False):
+    attrs = attrs or {}
+    # Escape attribute values
+    
+
+    attr_str = "".join(f' {k}="{escape(str(v), quote=True)}"' for k, v in attrs.items())
+    if self_closing:
+        return f"<{tag}{attr_str} />"
+    return f"<{tag}{attr_str}>{content}</{tag}>"
 
 
 def fix_df_columns(df):
@@ -136,43 +148,38 @@ def render(
         data_arrays = df.values.tolist()
         data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
 
-    columns, select_cols = [], []
+    columns = []
     for i, col in enumerate(df.columns):
         try:
             nunique = df[col].nunique()
         except TypeError:
-            # for nested rows unhashable type ex: 'list'
-            df[col] = df[col].apply(lambda x: repr(x))
+            # for nested rows unhashable types
+            df[col] = df[col].map(repr)
             nunique = df[col].nunique()
 
         col_cleaned = col.replace("_", " ")
 
         if nunique < dropdown_select_threshold:
-            select_cols.append(i)  # columns when  dropdown select makes  sense
             col_def = {"title": col_cleaned, "orderable": True}
+            if load_column_control:
+                col_def["columnControl"] = ["order", ["title","searchList"]]
+
         else:
             col_def = {"title": col_cleaned, "searchable": True, "orderable": True}
+            if load_column_control:
+                col_def["columnControl"] = ["order", ["title","search"]]
+
         if col in num_html:
             col_def["render"] = "#render_num"
             col_def["type"] = "num-html"
         columns.append(col_def)
-    column_control = [
-        {
-            "targets": select_cols,
-            "columnControl": [["order", "searchList"]],
-        },
-        {
-            "targets": list(set(range(len(df.columns))).difference(select_cols)),
-            "columnControl": ["order", "searchDropdown"],
-        },
-    ]
     columns_json = json.dumps(columns)
     if num_html:
         #  we need properly refer to javascript function defined in template
         # json must have string so get rid of the quotes
         columns_json = columns_json.replace('"#render_num"', "render_num")
 
-    auto_width = True if len(df.index) < 100 else False
+    auto_width = True if len(df.index) < 100 or len(df.columns) > 10 else False
 
     template_vars = {
         "title": str(title),
@@ -180,12 +187,11 @@ def render(
         "tab_data": data_json,
         "tab_columns": columns_json,
         "search_columns": json.dumps(list(str_cols)),
-        "select_cols": json.dumps(select_cols),
-        "column_control": json.dumps(column_control),
-        "load_column_control": json.dumps(load_column_control),
     }
     if not display_logo:
         template_vars["datatables_logo"] = ""
+    if not load_column_control:
+        template_vars["column_control"] = ""
 
     with open(templ_path, encoding="utf-8") as op_file:
         instr = op_file.read()
@@ -207,15 +213,12 @@ _render_str = partial(render, to_file=None)
 def render_inline(df, **kwargs):
     if "to_file" in kwargs:
         print(
-            f"wrong argument:[to_file] {
+            f"! wrong argument:[to_file] {
                 kwargs.pop('to_file')
             } is not allowed in render_inline"
         )
-        # del kwargs['to_file']
     html = _render_str(df, **kwargs)
-    min_content = c_render(
-        get_tag_content("min_content", html), {"render_inline": "true"}
-    )
+    min_content = get_tag_content("min_content", html)
     return min_content
 
 
@@ -235,10 +238,10 @@ def get_sample_df():
                 np.nan,
                 datetime.datetime,
                 pd.NA,  # lambda x: 1 / x,
-                "C",
+                ["C", {'a' : 1}],
             ],
             "col_2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
-            "Column 3": [random.choice(grades) for x in range(7)],
+            "C 3": [random.choice(grades) for x in range(7)],
             # "col3": [["ZZ","AA"], {'BB' : 1, 'BB' : 2}, "CC", "CC","CC", "ZZ", "ZZ"], #error rows
             "col4": [-0.333, 1, -9, 4, 2, 3, 1111.111],
             "col5": [-2000, -1, 2, 3, 4, 5, 70_000],
@@ -253,13 +256,13 @@ def get_sample_df():
 def render_sample_df(to_file="df_table.html"):
     df = get_sample_df()
     result = render(
-        df.reset_index(),
+        df,  # .reset_index(),
         to_file=to_file,
         title="Example dataframe",
         num_html=["col5", "col4", "col_2"],
         load_column_control=True,
         dropdown_select_threshold=5,
-        display_logo=False,
+        display_logo=True,
     )
     return result
 

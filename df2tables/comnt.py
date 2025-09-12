@@ -139,10 +139,8 @@ def example():
        <body> <h3>
            <!--[title-->
              Welcome to our site!
-
           <!--title]--></h3>
           <!--[content-->
-
           <p>
              This is placeholder content that shows in the browser.
           </p>
@@ -154,7 +152,6 @@ def example():
              // Example data array for
              const data = /*[data_arr*/ [0, 1]
              /*data_arr]*/;
-
              document.addEventListener('DOMContentLoaded', function() {
                  // Display data array in paragraph (like Python's repr)
                  const dataDisplay = document.getElementById('data-display');
@@ -204,7 +201,7 @@ def simple_example():
     const data = /*[data_arr*/
         [0, 1]
     /*data_arr]*/;
-
+    
       document.getElementById("data_arr").textContent = JSON.stringify(data);
       document.getElementById("title").textContent = title;
     </script>
