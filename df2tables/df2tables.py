@@ -1,33 +1,35 @@
 #!/usr/bin/python
 # coding=utf8
+
+import datetime
 import json
-import math
 import os
+import random
 import subprocess
 import sys
-from functools import partial
+import warnings
 from html import escape
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-TEMPLATE_FILE = "datatable_templ.html"
+# --- Constants ---
 try:
-    # python 3.9+
     from importlib import resources
-
-    TEMPLATE_PATH = str(resources.files("df2tables").joinpath(TEMPLATE_FILE))
+    TEMPLATE_PATH = resources.files("df2tables") / "datatable_templ.html"
 except ImportError:
-    TEMPLATE_PATH = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), TEMPLATE_FILE
-    )
+    TEMPLATE_PATH = Path(__file__).parent / "datatable_templ.html"
 
 try:
-    from .comnt import get_tag_content
-    from .comnt import render as c_render
+    from . import comnt
 except ImportError:
-    from comnt import get_tag_content
-    from comnt import render as c_render
+    import comnt
+
+DROPDOWN_SELECT_THRESHOLD = 9
+DEFAULT_TABLE_ID = "pd_datatab"
+DEFAULT_TABLE_CLASS = "display compact hover order-column"
+RENDER_NUM_TAG = "#render_num"
 
 __all__ = [
     "TEMPLATE_PATH",
@@ -39,236 +41,255 @@ __all__ = [
 
 
 def open_file(filename):
-    if sys.platform.startswith("win"):
-        os.startfile(filename)
-    else:
-        opener = "open" if sys.platform == "darwin" else "xdg-open"
-        subprocess.call([opener, filename])
+    """Opens a file with the default application in a cross-platform way."""
+    filepath = str(filename)  # Ensure path is a string for subprocess
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(filepath)
+        else:
+            opener = "open" if sys.platform == "darwin" else "xdg-open"
+            # Use subprocess.run for a more modern and flexible API.
+            subprocess.run([opener, filepath], check=True)
+    except Exception as e:
+        print(f"Error opening file: {e}")
 
 
 class DataJSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder with fallback to string representation"""
+    """
+    Custom JSON encoder for pandas data types.
+    Refactored to use isinstance for reliable type checking.
+    """
 
     def default(self, obj):
+        if pd.isna(obj) or (isinstance(obj, float) and np.isnan(obj)):
+            return None
+        elif isinstance(obj, (datetime.datetime, datetime.date, pd.Timestamp)):
+            return obj.isoformat()
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, (np.ndarray, list, tuple)):
+            return [self.default(item) for item in obj]
+        elif isinstance(obj, (bool, np.bool_)):
+            return bool(obj)
+        elif isinstance(obj, str):
+            return obj.strip()
         try:
-            obj_type = str(type(obj))
-            if "str" in obj_type:
-                return obj.strip()
-            elif "nan" in repr(obj).lower():
-                return None
-            elif "date" in obj_type or "Timestamp" in obj_type:
-                return obj.isoformat()
-            elif "int" in obj_type:
-                return int(obj)
-            elif "float" in obj_type:
-                return round(float(obj), 2)
-            elif "bool" in obj_type:
-                return bool(obj)
-            elif isinstance(obj, (np.void)):
-                return 0
+            # Fallback for other types that JSONEncoder can handle
             return super().default(obj)
-        except BaseException:
-            print("json error: ", repr(obj), sys.exc_info()[1])
-            # Fallback to string representation for any problematic objects
+        except TypeError:
+            # Final fallback to a safe string representation
             return escape(repr(obj))
 
 
 def html_tag(tag, content="", attrs=None, self_closing=False):
+    """Generates an HTML tag."""
     attrs = attrs or {}
-    # Escape attribute values
-    
-
     attr_str = "".join(f' {k}="{escape(str(v), quote=True)}"' for k, v in attrs.items())
     if self_closing:
         return f"<{tag}{attr_str} />"
     return f"<{tag}{attr_str}>{content}</{tag}>"
 
 
-def fix_df_columns(df):
-    for col in df.columns:
+# --- Helper Functions for `render` ---
+
+
+def _prepare_dataframe(df, precision):
+    """
+    Prepares a DataFrame for rendering. Handles Series, MultiIndex,
+    and data type conversions without modifying the original DataFrame.
+    """
+    if isinstance(df, pd.Series):
+        print("Converting Series to DataFrame...")
+        df = df.to_frame(name=df.name or "value").reset_index()
+
+    # Work on a copy to avoid side effects on the original DataFrame.
+    df_copy = df.copy()
+
+    df_copy.columns = df_copy.columns.astype(str)
+    if isinstance(df_copy.columns, pd.MultiIndex):
+        df_copy.columns = ["_".join(map(str, col)).strip() for col in df_copy.columns]
+
+    # Round float columns to the specified precision.
+    float_cols = df_copy.select_dtypes(include="number").columns
+    df_copy[float_cols] = df_copy[float_cols].round(precision)
+
+    # Convert unhashable types within columns to their string representation.
+    for col in df_copy.columns:
         try:
-            test_val = (
-                df[col].dropna().values.tolist() if not df[col].isna().all() else None
-            )
-            json.dumps(test_val, cls=DataJSONEncoder)
-        except BaseException:
-            print(f"! column error: {col}", sys.exc_info())
-            df[col] = df[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
-    return df
+            df_copy[col].nunique()
+        except TypeError:
+            df_copy[col] = df_copy[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
+
+    return df_copy
 
 
-def to_none(val):
+def _generate_column_definitions(df, num_html, load_column_control):
+    """Generates the column definitions list for DataTables."""
+    columns = []
+    for col in df.columns:
+        nunique = df[col].nunique()
+        col_cleaned = col.replace("_", " ")
+
+        if nunique < DROPDOWN_SELECT_THRESHOLD:
+            col_def = {"title": col_cleaned}
+            if load_column_control:
+                col_def["columnControl"] = ["order", ["title", "searchList"]]
+        else:
+            col_def = {"title": col_cleaned, "searchable": True}
+            if load_column_control:
+                col_def["columnControl"] = ["order", ["title", "search"]]
+
+        col_def["orderable"] = True
+
+        if col in num_html:
+            col_def["render"] = RENDER_NUM_TAG  # Use a constant
+            col_def["type"] = "num-html"
+
+        columns.append(col_def)
+    return columns
+
+
+def _render_html_template(template_path, template_vars):
+    """Loads and renders the HTML template with the given variables."""
     try:
-        if math.isnan(val):
-            return None
-    except TypeError:
-        return val
-    return val
+        with open(template_path, encoding="utf-8") as f:
+            template_str = f.read()
+        return comnt.render(template_str, template_vars)
+    except FileNotFoundError:
+        print(f"Error: Template file not found at {template_path}")
+        return ""
 
 
 def render(
     df,
-    to_file=None,
-    title="Title",
+    to_file="datatable.html",
+    title="DataFrame",
     precision=2,
-    num_html=[],
+    num_html=None,
     startfile=True,
     templ_path=TEMPLATE_PATH,
     load_column_control=True,
-    dropdown_select_threshold=9,
     display_logo=True,
 ):
-    if isinstance(df, pd.Series):
-        print("Converting Series do DataFrame...")
-        df = df.to_frame(name="col").reset_index()
-    assert isinstance(df, pd.DataFrame)
-    assert isinstance(title, str)
-    assert isinstance(load_column_control, bool)
+    """
+    Renders a pandas DataFrame as an interactive HTML DataTables.
+    Refactored to be a high-level coordinator of helper functions.
+    """
+    df_prepared = _prepare_dataframe(df, precision)
 
-    df.columns = df.columns.astype(str)
-    if "MultiIndex" in repr(df.columns):  # experimental
-        df.columns = ["_".join(str(x)) for x in df.columns]
+    data_json = json.dumps(df_prepared.to_dict(orient='split')['data'], cls=DataJSONEncoder)
 
-    missing_cols = set(num_html).difference(df.columns)
-    if missing_cols:
-        raise AssertionError(f"column(s): {missing_cols} not found in dataframe")
-
-    float_cols = df.select_dtypes(include=[np.float16, np.float32, np.float64])
-    str_cols = df.select_dtypes(include=["object", "string"]).columns
-    df.loc[:, float_cols.columns] = np.round(float_cols, precision)
-
-    try:
-        # data_arrays = df.values.tolist()
-        data_arrays = [list(map(to_none, row)) for row in df.values.tolist()]
-        data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
-
-    except BaseException:
-        print(" json error", sys.exc_info())
-        df = fix_df_columns(df)
-        data_arrays = df.values.tolist()
-        data_json = json.dumps(data_arrays, cls=DataJSONEncoder)
-
-    columns = []
-    for i, col in enumerate(df.columns):
-        try:
-            nunique = df[col].nunique()
-        except TypeError:
-            # for nested rows unhashable types
-            df[col] = df[col].map(repr)
-            nunique = df[col].nunique()
-
-        col_cleaned = col.replace("_", " ")
-
-        if nunique < dropdown_select_threshold:
-            col_def = {"title": col_cleaned, "orderable": True}
-            if load_column_control:
-                col_def["columnControl"] = ["order", ["title","searchList"]]
-
-        else:
-            col_def = {"title": col_cleaned, "searchable": True, "orderable": True}
-            if load_column_control:
-                col_def["columnControl"] = ["order", ["title","search"]]
-
-        if col in num_html:
-            col_def["render"] = "#render_num"
-            col_def["type"] = "num-html"
-        columns.append(col_def)
+    columns = _generate_column_definitions(df_prepared, num_html or [], load_column_control)
     columns_json = json.dumps(columns)
-    if num_html:
-        #  we need properly refer to javascript function defined in template
-        # json must have string so get rid of the quotes
-        columns_json = columns_json.replace('"#render_num"', "render_num")
+    # This replacement is a necessary trick to pass a JS function name into the JSON.
+    columns_json = columns_json.replace(f'"{RENDER_NUM_TAG}"', RENDER_NUM_TAG.strip("#"))
 
-    auto_width = True if len(df.index) < 100 or len(df.columns) > 10 else False
+    str_cols = df_prepared.select_dtypes(include=["object", "string"]).columns
+    auto_width = len(df_prepared.index) < 100 or len(df_prepared.columns) > 10
 
     template_vars = {
-        "title": str(title),
+        "title": escape(str(title)),
         "auto_width": json.dumps(auto_width),
         "tab_data": data_json,
         "tab_columns": columns_json,
         "search_columns": json.dumps(list(str_cols)),
     }
+
     if not display_logo:
         template_vars["datatables_logo"] = ""
     if not load_column_control:
         template_vars["column_control"] = ""
 
-    with open(templ_path, encoding="utf-8") as op_file:
-        instr = op_file.read()
-    html = c_render(instr, template_vars)
+    html_content = _render_html_template(templ_path, template_vars)
+
     if not to_file:
-        return html
-    assert templ_path != to_file and templ_path not in to_file
-    assert ".html" in to_file
-    with open(to_file, "w", encoding="utf8") as outfile:
-        outfile.write(html)
-    if startfile:
-        open_file(to_file)
-    return outfile
+        return html_content
+
+    try:
+        with open(to_file, "w", encoding="utf-8") as outfile:
+            outfile.write(html_content)
+        if startfile:
+            open_file(to_file)
+        return to_file  # Return the path for confirmation
+    except IOError as e:
+        print(f"Error writing to file {to_file}: {e}")
+        return None
 
 
-_render_str = partial(render, to_file=None)
+def render_inline(df, table_attrs=None, **kwargs):
+    """Renders a DataFrame as an inline HTML table for embedding."""
+    # Use .pop() to safely remove and check for disallowed arguments.
+    if kwargs.pop("to_file", None):
+        warnings.warn("'to_file' argument is not allowed in render_inline.")
+    if kwargs.pop("title", None):
+        warnings.warn("'title' argument is not applicable in render_inline.")
 
+    # Always render without a file.
+    html = render(df, to_file=None, **kwargs)
 
-def render_inline(df, **kwargs):
-    if "to_file" in kwargs:
-        print(
-            f"! wrong argument:[to_file] {
-                kwargs.pop('to_file')
-            } is not allowed in render_inline"
-        )
-    html = _render_str(df, **kwargs)
-    min_content = get_tag_content("min_content", html)
+    attrs = {
+        "id": DEFAULT_TABLE_ID,
+        "class": DEFAULT_TABLE_CLASS,
+        **(table_attrs or {}),
+    }
+
+    base_table = html_tag("table", attrs=attrs)
+    # Update the table ID in the JavaScript if a custom ID is provided.
+    html = comnt.render(html, {"table_id": f'"{attrs["id"]}"'})
+
+    min_content = base_table + comnt.get_tag_content("min_content", html)
     return min_content
 
 
 def get_sample_df():
-    import datetime
-    import random
-
+    """Generates a sample DataFrame for demonstration."""
     healthcare = ["Low priority", "Medium priority", "High priority", "Emergency"]
     product = ["Premium", "Standard", "Budget"]
     grades = ["A", "B", "C", "D", "F"]
-    return pd.DataFrame(
-        {
-            "col_1a": [
-                datetime.datetime.now(),
-                "Lorem ipsum dolor sit amet, consectetur adipiscing",
-                "<b>Integer</b> laoreet odio et.",
-                np.nan,
-                datetime.datetime,
-                pd.NA,  # lambda x: 1 / x,
-                ["C", {'a' : 1}],
-            ],
-            "col_2": [0.09, -0.591, 0.201, -0.487, -0.175, -0.797, -0.519],
-            "C 3": [random.choice(grades) for x in range(7)],
-            # "col3": [["ZZ","AA"], {'BB' : 1, 'BB' : 2}, "CC", "CC","CC", "ZZ", "ZZ"], #error rows
-            "col4": [-0.333, 1, -9, 4, 2, 3, 1111.111],
-            "col5": [-2000, -1, 2, 3, 4, 5, 70_000],
-            "col6": [random.choice(product) for x in range(7)],
-            "col7": ["1", "0", "1", "0", "1", "0", "0"],
-            "col8": [-1, 1, 2, 1, 1, 0, 0],
-            "col9": [random.choice(healthcare) for x in range(7)],
-        }
-    )
+    size = 7
+    fmt = "%Y-%m-%d %H:%M:%S"
+    return pd.DataFrame({
+        "timestamp": [(datetime.datetime.now() - datetime.timedelta(days=i)).strftime(fmt)
+                      for i in range(size)],
+        "description": [
+            "Lorem ipsum dolor sit amet",
+            "<b>HTML content</b> is allowed",
+            "Consectetur adipiscing elit",
+            None,
+            "Integer laoreet odio",
+            pd.NA,
+            "Nested: " + repr(["C", {
+                "a": 1
+            }]),
+        ],
+        "value": np.random.randn(size),
+        "grade": np.random.choice(grades, size),
+        "measurement": [-0.333, 1, -9, 4, 2, 3, 1111.111],
+        "revenue": [random.randint(-2000, 70000) for _ in range(size)],
+        "product_type": np.random.choice(product, size),
+        "is_active": np.random.choice([True, False], size),
+        "priority": np.random.choice(healthcare, size),
+    })
 
 
 def render_sample_df(to_file="df_table.html"):
+    """Creates and renders the sample DataFrame."""
     df = get_sample_df()
-    result = render(
-        df,  # .reset_index(),
+    return render(
+        df,
         to_file=to_file,
-        title="Example dataframe",
-        num_html=["col5", "col4", "col_2"],
-        load_column_control=True,
-        dropdown_select_threshold=5,
-        display_logo=True,
+        title="Example DataFrame",
+        num_html=["revenue", "measurement", "value"],
     )
-    return result
 
 
 def main():
-    print(render_sample_df(to_file="1test.html"))
+    """Main function to run when the script is executed directly."""
+    output_path = render_sample_df(to_file="test_datatable.html")
+    if output_path:
+        print(f"Successfully generated sample table at: {output_path}")
 
 
 if __name__ == "__main__":

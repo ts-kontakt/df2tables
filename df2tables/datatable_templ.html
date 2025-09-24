@@ -32,12 +32,12 @@
             white-space: nowrap;
         }
 
-        table.dataTable.display tbody td {
+        table.dataTable  td {
             white-space: nowrap;
             font-size: 0.875rem;
         }
 
-        table.dataTable.display tbody td span {
+        table.dataTable td span {
             float: right;
         }
 
@@ -112,13 +112,14 @@
 <body>
     <div class="pure-g">
         <div class="pure-u-1 pure-u-md-1-1">
-            <!--[min_content-->
+            
             <div id="tabcnt" style="width: fit-content; margin-left: 1em">
                 <p><!--[title-->
                     Example dataframe <!--title]--></p>
                 <table id="pd_datatab" class="display compact hover order-column"></table>
             </div>
         </div>
+        <!--[min_content-->
         <script type="text/javascript">
             (function() {
 
@@ -237,9 +238,9 @@
                     bottomEnd: null,
                     bottom: "paging",
                 };
-                /*[table_id*/
-                const TABLE_ID = "pd_datatab";
-                /*table_id]*/
+               
+                const TABLE_ID =  /*[table_id*/ "pd_datatab"
+                /*table_id]*/;
 
                 const build_table = function() {
                     const table = $("#" + TABLE_ID).DataTable({
@@ -260,15 +261,15 @@
                             const searchableColumns = search_columns;
                             const searchNote = $("<p>")
                                 .css({
-                                    "margin-bottom": "10px",
+                                    "margin-bottom": "0.5rem",
                                     "font-size": "0.7rem",
-                                    color: "#666",
+                                    color: "#667",
                                 })
                                 .text(
                                     "General search is enabled for: " +
                                     searchableColumns.join(", "),
                                 );
-                            $("#pd_datatab_wrapper").prepend(searchNote);
+                            $("#" + TABLE_ID + "_wrapper").prepend(searchNote);
                         },
                     });
                 };
