@@ -257,11 +257,6 @@ The module includes error handling for:
 
 Currently, `df2tables` uses a predefined set of DataTables configuration options. Future versions could expose more DataTables initialization parameters directly from Python.
 
-## License
-
-MIT License  
-© Tomasz Sługocki
-
 ## Appendix: Template Customization
 
 ### Offline Usage
