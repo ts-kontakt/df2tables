@@ -80,7 +80,6 @@ df2t.render(
 - `startfile`: If True, automatically opens the generated HTML file in default browser
 - `templ_path`: Path to custom HTML template (uses default if not specified)
 - `load_column_control`: If True, integrates the [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) programmatically for enhanced filtering and search capabilities (default: True)
-- `dropdown_select_threshold`: Maximum number of unique values in a column to qualify for dropdown filtering (default: 9)
 - `display_logo`: If True, displays DataTables logo (default: True)
 
 **Returns:**
