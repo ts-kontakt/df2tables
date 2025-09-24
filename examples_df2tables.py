@@ -9,7 +9,7 @@ import pandas as pd
 import df2tables as df2t
 
 
-def random_data(num_rows=100):
+def df_random_data(num_rows=100):
 
     def get_rdylgn_colors(num_colors=100):
         cmap = matplotlib.colormaps["YlGnBu"]
@@ -27,15 +27,13 @@ def random_data(num_rows=100):
 
     healthcare = ["Low priority", "Medium priority", "High priority", "Emergency"]
     credit_ratings = ["Excellent", "Good", "Average", "Fair", "Poor"]
-    job = ["Senior", "Mid-level", "Junior", "Entry-level"]
-    product = ["Premium", "Standard", "Budget"]
 
     def gen_datetime(min_year=1990, max_year=datetime.now().year):
         # generate a datetime in format yyyy-mm-dd hh:mm:ss.000000
         start = datetime(min_year, 1, 1, 00, 00, 00)
         years = max_year - min_year + 1
         end = start + timedelta(days=365 * years)
-        return start + (end - start) * random.random()
+        return (start + (end - start) * random.random()).date()
 
     lorem_ipsum_text = """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis at ipsum ut ex venenatis tempor. Cras fermentum metus nec massa viverra cursus. Integer pretium massa non mauris tincidunt, at porttitor massa pretium. Nulla vel felis justo. Pellentesque vel eros nec metus varius laoreet. Mauris accumsan ornare pellentesque. Maecenas gravida urna mollis gravida iaculis. Aenean a nunc vel sapien tempor scelerisque. Donec vitae hendrerit enim.
@@ -52,29 +50,31 @@ def random_data(num_rows=100):
             random.uniform(-10, 10),
             random.uniform(-1, 1),
             random.choice(healthcare),
-            random.choice(job),
-            random.choice(product),
             random.choice(credit_ratings),
             repr(random.choice([True, False])),
             str(gen_datetime()),
             colors[i],
         ]
-    
+
         result.append(row)
     columns = [f"col{i}" for i in range(len(result[0]))]
     df = pd.DataFrame(result, columns=columns)
+    return df
 
-    import sys
-    sys_info = f'<br><small style="color:gray">{sys.platform}</small>'
+
+def render_random_df(num_rows):
+    df = df_random_data(num_rows=num_rows)
+    # sys_info = f'<br><small style="color:gray">{sys.platform}</small>'
+    sys_info = f''
 
     outfile = "rnd_table2.html"
     df2t.render(
         df,
         to_file=outfile,
-        title=f"Example Diverse Random Data <b>{num_rows} rows</b>! {sys_info}",
-        num_html=["col1", "col2"],
+        title=f"Example Diverse Random Data <b style='color:red;'>{num_rows:,d} rows! </b>{sys_info}"
+        .replace(',', ' '),
     )
-    return result
+    return
 
 
 def pkg_test():
@@ -90,7 +90,7 @@ def pkg_test():
             dists = random_data(num_rows=100)
         return dists
 
-    header_list = ["name        ", "ver  ", "full package path"]
+    header_list = ["name        ", 111, "full package path"]
     df = pd.DataFrame(get_packages(), columns=header_list)
 
     outfile = "pkg_table.html"
@@ -98,6 +98,6 @@ def pkg_test():
 
 
 if __name__ == "__main__":
-    # testitables()
-    # pkg_test()
-    random_data(50000)
+    pkg_test()
+    # random_data(10000)
+    render_random_df(10_000)
