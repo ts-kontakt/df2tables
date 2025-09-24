@@ -233,11 +233,7 @@ The `load_column_control` parameter enables smart integration with the [DataTabl
 ```python
 # Disable Column Control for simpler tables
 df2t.render(df, load_column_control=False, to_file="simple_table.html")
-
-# Customize dropdown threshold
-df2t.render(df, dropdown_select_threshold=10, to_file="custom_table.html")
 ```
-
 ## Requirements
 
 - Python 3.7+
