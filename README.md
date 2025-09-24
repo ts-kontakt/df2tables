@@ -66,7 +66,6 @@ df2t.render(
     startfile: bool = True,
     templ_path: str = TEMPLATE_PATH,
     load_column_control: bool = True,
-    dropdown_select_threshold: int = 9,
     display_logo: bool = True
 ) -> Union[str, file_object]
 ```
