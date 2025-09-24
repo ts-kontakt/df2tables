@@ -175,7 +175,6 @@ def render(
 ):
     """
     Renders a pandas DataFrame as an interactive HTML DataTables.
-    Refactored to be a high-level coordinator of helper functions.
     """
     df_prepared = _prepare_dataframe(df, precision)
 
@@ -220,7 +219,6 @@ def render(
 
 def render_inline(df, table_attrs=None, **kwargs):
     """Renders a DataFrame as an inline HTML table for embedding."""
-    # Use .pop() to safely remove and check for disallowed arguments.
     if kwargs.pop("to_file", None):
         warnings.warn("'to_file' argument is not allowed in render_inline.")
     if kwargs.pop("title", None):
@@ -286,7 +284,6 @@ def render_sample_df(to_file="df_table.html"):
 
 
 def main():
-    """Main function to run when the script is executed directly."""
     output_path = render_sample_df(to_file="test_datatable.html")
     if output_path:
         print(f"Successfully generated sample table at: {output_path}")
