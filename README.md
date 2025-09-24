@@ -43,13 +43,13 @@ pip install df2tables
 ### Sample DataFrame
 
 ```python
+import df2tables as df2t
 # Get sample DataFrame for testing
 sample_df = df2t.get_sample_df()
 
 # Generate and render sample DataFrame
-html_string = df2t.render_sample_df(to_file="sample_table.html")
+df2t.render_sample_df(to_file="sample_table.html")
 ```
-
 *Note: DataFrame indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call `df2tables.render(df.reset_index(), args...)`*
 
 ## Main Functions
