@@ -228,11 +228,11 @@
                     ["col_1a", "C 3", "col6", "col7", "col9"]
                 /*search_columns]*/
 
-
-
-                DataTable.defaults.layout = {
+                const search_val = search_columns && search_columns.length > 0 ? "search" : null;
+                
+                const custom_layout = {
                     topStart: "info",
-                    top1Start: "search",
+                    top1Start: search_val,
                     topEnd: null,
                     bottomStart: null,
                     bottomEnd: null,
@@ -245,6 +245,7 @@
                 const build_table = function() {
                     const table = $("#" + TABLE_ID).DataTable({
                         data: tab_data,
+                        layout: custom_layout,
                         autoWidth: /*[auto_width*/ true
                             /*auto_width]*/
                             ,
@@ -252,12 +253,17 @@
                         pageLength: 100,
                         responsive: true,
                         scrollX: false,
+                        processing: true,
                         order: [],
                         language: {
                             search: '_INPUT_',
                             searchPlaceholder: 'Search...'
                         },
                         initComplete: function() {
+                            if (!search_columns || search_columns.length === 0) {
+                                return;
+                            }
+                        
                             const searchableColumns = search_columns;
                             const searchNote = $("<p>")
                                 .css({

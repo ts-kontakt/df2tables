@@ -13,7 +13,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
+#todo https://datatables.net/reference/option/
 # --- Constants ---
 try:
     from importlib import resources
@@ -120,7 +120,7 @@ def _prepare_dataframe(df, precision):
         try:
             df_copy[col].nunique()
         except TypeError:
-            df_copy[col] = df_copy[col].apply(lambda x: repr(x) if not pd.isna(x) else None)
+            df_copy[col] = df_copy[col].map(repr)
 
     return df_copy
 
@@ -189,7 +189,7 @@ def render(
     auto_width = len(df_prepared.index) < 100 or len(df_prepared.columns) > 10
 
     template_vars = {
-        "title": escape(str(title)),
+        "title": str(title), #allow html in title
         "auto_width": json.dumps(auto_width),
         "tab_data": data_json,
         "tab_columns": columns_json,
@@ -255,7 +255,7 @@ def get_sample_df():
             "Lorem ipsum dolor sit amet",
             "<b>HTML content</b> is allowed",
             "Consectetur adipiscing elit",
-            None,
+            [1, [2,4]] , #raw object
             "Integer laoreet odio",
             pd.NA,
             "Nested: " + repr(["C", {
