@@ -1,14 +1,11 @@
-"""
-A Flask application demonstrating how to render multiple pandas DataFrames
-as interactive HTML tables using the df2tables library.
-"""
-
-import uuid
 import random
+import uuid
 from datetime import datetime, timedelta
+
 import pandas as pd
-import df2tables
 from flask import Flask, render_template_string
+
+import df2tables
 
 PAGE_TEMPLATE = """
 <!DOCTYPE html>
@@ -51,6 +48,10 @@ PAGE_TEMPLATE = """
         table.dataTable td span {
             float: right;
         }
+         table.dataTable  td {
+            white-space: nowrap;
+            font-size: 0.875rem;
+        }
     </style>
 
     <script>
@@ -75,13 +76,14 @@ PAGE_TEMPLATE = """
             <p><strong>CSS Class:</strong> <code>display</code> | 
                <strong>Wrapper Width:</strong> <code>fit-content</code> | 
                <strong>Column Control:</strong> Enabled</p>
+               <p>The <a href="https://datatables.net/examples/styling/display.html" target="blank"><code>display</code></a> class is a short-cut for specifying the  <code>stripe hover order-column row-border </code>
             <div class="fit-content-wrapper">
                 {{ table1_html | safe }}
             </div>
         </div>
 
         <div id="tabs-2">
-            <p><strong>CSS Class:</strong> <code>compact</code> | 
+            <p><strong>CSS Class:</strong> <code>display compact hoover</code> | 
                <strong>Wrapper Width:</strong> <code>fit-content</code> | 
                <strong>Column Control:</strong> Enabled | 
                <strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code></p>
@@ -121,14 +123,21 @@ def generate_random_dataframe(num_rows: int = 100) -> pd.DataFrame:
     Returns:
         pd.DataFrame: A DataFrame containing randomized sample data.
     """
-    healthcare_priorities = ["Low priority", "Medium priority", "High priority", "Emergency"]
+    healthcare_priorities = [
+        "Low priority",
+        "Medium priority",
+        "High priority",
+        "Emergency",
+    ]
     credit_ratings = ["Excellent", "Good", "Average", "Fair", "Poor"]
     lorem_ipsum_words = [
-        word.strip() for word in """
+        word.strip()
+        for word in """
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis at ipsum ut ex venenatis tempor.
         Cras fermentum metus nec massa viverra cursus. Integer pretium massa non mauris tincidunt,
         at porttitor massa pretium.
-        """.split() if len(word.strip()) > 3
+        """.split()
+        if len(word.strip()) > 3
     ]
 
     def get_random_date(min_year: int = 1990) -> datetime.date:
@@ -155,8 +164,14 @@ def generate_random_dataframe(num_rows: int = 100) -> pd.DataFrame:
         data.append(row)
 
     columns = [
-        "date", "description", "quantity", "change",
-        "percentage", "priority", "rating", "is_active"
+        "date",
+        "description",
+        "quantity",
+        "change",
+        "percentage",
+        "priority",
+        "rating",
+        "is_active",
     ]
     return pd.DataFrame(data, columns=columns)
 
@@ -172,37 +187,33 @@ def display_tables():
     sample_df = generate_random_dataframe()
 
     # Table 1: Default DataTables styling with ColumnControl enabled
-    table1_attrs = {'id': uuid.uuid4().hex, 'class': 'display'}
     table1_html = df2tables.render_inline(
         sample_df.copy(),
-        table_attrs=table1_attrs,
-        load_column_control=True
+        table_attrs={"id": uuid.uuid4().hex, "class": "display"},
+        load_column_control=True,
     )
 
     # Table 2: Compact styling, numeric formatting, with ColumnControl
-    table2_attrs = {'id': uuid.uuid4().hex, 'class': 'compact'}
     table2_html = df2tables.render_inline(
         sample_df.copy(),
-        table_attrs=table2_attrs,
-        num_html=['percentage', 'change'],
-        load_column_control=True
+        table_attrs={"id": uuid.uuid4().hex, "class": "display compact hoover"},
+        num_html=["percentage", "change"],
+        load_column_control=True,
     )
 
     # Table 3: Default styling without ColumnControl
-    table3_attrs = {'id': uuid.uuid4().hex, 'class': 'display'}
     table3_html = df2tables.render_inline(
         sample_df.copy(),
-        table_attrs=table3_attrs,
-        load_column_control=False
+        table_attrs={"id": uuid.uuid4().hex, "class": "display"},
+        load_column_control=False,
     )
 
     # Table 4: Compact + display classes, numeric formatting, no ColumnControl
-    table4_attrs = {'id': uuid.uuid4().hex, 'class': 'display compact'}
     table4_html = df2tables.render_inline(
         sample_df.copy(),
-        num_html=['percentage', 'change'],
-        table_attrs=table4_attrs,
-        load_column_control=False
+        num_html=["percentage", "change"],
+        table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
+        load_column_control=False,
     )
 
     return render_template_string(
@@ -210,7 +221,7 @@ def display_tables():
         table1_html=table1_html,
         table2_html=table2_html,
         table3_html=table3_html,
-        table4_html=table4_html
+        table4_html=table4_html,
     )
 
 
