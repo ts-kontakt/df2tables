@@ -2,28 +2,30 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/df2tables.svg)](https://pypi.org/project/df2tables/)
 
-`df2tables` is a Python utility for exporting `pandas.DataFrame` objects to interactive HTML tables using [DataTables](https://datatables.net/) - an excellent JavaScript library for table functionality.
+`df2tables` is a Python utility for exporting `pandas` and `polars` dataframes to interactive HTML tables using [DataTables](https://datatables.net/) - an excellent JavaScript library. Built to embed seamlessly into Flask, Django, FastAPI, or any web framework.
 
-The table is rendered from a JavaScript array, resulting in smaller file sizes and allowing for viewing quite large datasets while maintaining responsiveness.
+By rendering tables from JavaScript arrays, this tool delivers **fast performance and compact file sizes, enabling smooth browsing of large datasets while maintaining full responsiveness**.
+
+**Lightweight dependencies**: only `pandas` **or** `polars` (you don’t need pandas installed if using polars).
 
 ## Features
 
-- Converts `pandas.DataFrame` to interactive standalone HTML tables
+- Converts `pandas` and `polars` dataframes interactive standalone HTML tables
+- **Web Framework Ready**: Specifically designed for easy embedding in Flask, Django, FastAPI, and other web frameworks
 - Browse **large datasets** using filters and sorting
-- No need to export to Excel—explore and filter your data directly in the browser, which is faster and more convenient
-- **Minimal HTML snippet generation**: Generate embeddable HTML tables for Flask or other web frameworks
-- Works independently of Jupyter or web servers—viewable offline in any browser, portable and easy to share
-- **Useful for training dataset inspection and feature engineering**: Quickly browse through large datasets, identify outliers, and data quality issues interactively
+- Works **independently of Jupyter or web servers** - viewable offline in any browser, portable and easy to share
+- Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
+- **Smart column detection**: Automatically identifies categorical columns  for dropdown filtering
 
 ## Screenshots
 
 ![df2tables demo with 1,000,000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
 
-A standalone HTML file containing a JavaScript array as data source for DataTables has several advantages. For example, you can browse quite large datasets locally (something you don't usually do on a server).
+A standalone HTML file containing a JavaScript array as data source for DataTables has several advantages. For example, you can browse quite large datasets locally.
 
 The column control feature provides dropdown filters for categorical data and search functionality for text columns, enhancing data exploration capabilities through the excellent [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/).
 
-*Note: By default, general search is enabled for all non-numeric columns.*
+*Note: By default, filtering is enabled for all non-numeric columns.*
 
 ## Quick Start
 
@@ -42,14 +44,14 @@ pip install df2tables
 ### Sample DataFrame
 
 ```python
-import df2tables as df2t
 # Get sample DataFrame for testing
 sample_df = df2t.get_sample_df()
 
 # Generate and render sample DataFrame
-df2t.render_sample_df(to_file="sample_table.html")
+html_string = df2t.render_sample_df(to_file="sample_table.html")
 ```
-*Note: DataFrame indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call `df2tables.render(df.reset_index(), args...)`*
+
+*Note: Pandas DataFrame indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call `df2tables.render(df.reset_index(), args...)`*
 
 ## Main Functions
 
@@ -227,11 +229,6 @@ The `load_column_control` parameter enables smart integration with the [DataTabl
 # Disable Column Control for simpler tables
 df2t.render(df, load_column_control=False, to_file="simple_table.html")
 ```
-## Requirements
-
-- Python 3.7+
-- pandas
-
 ### Error Handling
 
 The module includes error handling for:
@@ -268,7 +265,7 @@ While [comnt](https://github.com/ts-kontakt/comnt) is used to ensure that the HT
 
 Copy and modify `datatable_templ.html` to apply custom styling or libraries, then pass the new template path to `templ_path`.
 
-### Handle MultiIndex Columns (Experimental)
+### Handle Pandas MultiIndex Columns (Experimental)
 
 MultiIndex columns are automatically flattened with underscore separation.
 
