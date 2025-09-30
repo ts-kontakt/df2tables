@@ -132,7 +132,7 @@
                     return a;
                 }
 
-
+                
                 jQuery.extend(jQuery.fn.dataTableExt.oSort, {
                     "num-html-pre": function(a) {
                         var x = String(a).replace(/<[\s\S]*?>/g, "");
@@ -147,8 +147,11 @@
                         return a < b ? 1 : a > b ? -1 : 0;
                     },
                 });
+                
+                const render_precision = /*[precision*/  3 /*precision]*/
+                
                 const render_num = (data, type) => {
-                    const number = DataTable.render.number(" ", ",", 2).display(data);
+                    const number = DataTable.render.number(" ", ",", render_precision).display(data);
 
                     if (type !== "display") return number;
 
@@ -246,9 +249,7 @@
                     const table = $("#" + TABLE_ID).DataTable({
                         data: tab_data,
                         layout: custom_layout,
-                        autoWidth: /*[auto_width*/ true
-                            /*auto_width]*/
-                            ,
+                        autoWidth: /*[auto_width*/ false/*auto_width]*/,
                         columns: columns,
                         pageLength: 100,
                         responsive: true,
