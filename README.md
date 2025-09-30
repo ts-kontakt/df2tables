@@ -15,7 +15,7 @@ By rendering tables from JavaScript arrays, this tool delivers **fast performanc
 - Browse **large datasets** using filters and sorting
 - Works **independently of Jupyter or web servers** - viewable offline in any browser, portable and easy to share
 - Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
-- **Smart column detection**: Automatically identifies categorical columns  for dropdown filtering
+- Smart column detection: Automatically identifies categorical columns  for dropdown filtering
 
 ## Screenshots
 
