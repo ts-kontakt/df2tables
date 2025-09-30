@@ -86,7 +86,9 @@ PAGE_TEMPLATE = """
             <p><strong>CSS Class:</strong> <code>display compact hoover</code> | 
                <strong>Wrapper Width:</strong> <code>fit-content</code> | 
                <strong>Column Control:</strong> Enabled | 
-               <strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code></p>
+               <strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code>
+               <br>| <strong>Float precision:</strong><code> precision=4 </code>
+               </p>
             <div class="fit-content-wrapper">
                 {{ table2_html | safe }}
             </div>
@@ -196,6 +198,7 @@ def display_tables():
     # Table 2: Compact styling, numeric formatting, with ColumnControl
     table2_html = df2tables.render_inline(
         sample_df.copy(),
+        precision=4,
         table_attrs={"id": uuid.uuid4().hex, "class": "display compact hoover"},
         num_html=["percentage", "change"],
         load_column_control=True,
