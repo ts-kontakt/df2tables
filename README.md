@@ -138,7 +138,7 @@ def home():
     df = df2t.get_sample_df()
     df_title = "DataFrame Rendered as DataTable inline in <strong>Flask</strong>"
 
-    string_datatable = df2t.render_inline(df, title=df_title)
+    string_datatable = df2t.render_inline(df)
 
     # Embed in a complete HTML template with all required dependencies
     return render_template_string(
