@@ -1,12 +1,21 @@
-# df2tables
+# df2tables - Pandas & Polars DataFrames to Interactive HTML Tables
 
 [![PyPI version](https://img.shields.io/pypi/v/df2tables.svg)](https://pypi.org/project/df2tables/)
 
-`df2tables` is a Python utility for exporting `pandas` and `polars` dataframes to interactive HTML tables using [DataTables](https://datatables.net/) - an excellent JavaScript library. Built to embed seamlessly into Flask, Django, FastAPI, or any web framework.
+`df2tables` is a Python utility for exporting **Pandas** and **Polars** DataFrames into interactive HTML tables using [DataTables](https://datatables.net/) - a powerful JavaScript library.  
+It’s built to embed seamlessly into Flask, Django, FastAPI, or any web framework.
 
-By rendering tables from JavaScript arrays, this tool delivers **fast performance and compact file sizes, enabling smooth browsing of large datasets while maintaining full responsiveness**.
+By rendering tables directly from JavaScript arrays, this tool delivers **fast performance and compact file sizes**, enabling smooth browsing of large datasets while maintaining full responsiveness.
 
-**Lightweight dependencies**: only `pandas` **or** `polars` (you don’t need pandas installed if using polars).
+**Minimal dependencies**: only `pandas` ***or*** `polars` (you don’t need pandas installed if using polars).
+
+Converting a DataFrame into an interactive table is **just one function call**:
+
+```python
+render(df, **kwargs) 
+# or for web frameworks:
+render_inline(df, **kwargs)
+```
 
 ## Features
 
