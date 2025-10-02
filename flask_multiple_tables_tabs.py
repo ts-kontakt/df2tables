@@ -13,7 +13,7 @@ PAGE_TEMPLATE = """
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>df2tables – Multiple Tables Demo</title>
+    <title>df2tables - Multiple Tables Demo</title>
 
     <!-- jQuery and jQuery UI -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.min.css">
@@ -52,6 +52,20 @@ PAGE_TEMPLATE = """
             white-space: nowrap;
             font-size: 0.875rem;
         }
+        .tab-description {
+            background-color: #f9f9f9;
+            border-left: 3px solid rgb(13 110 253 / 43%);
+            padding: 1em;
+            margin-bottom: 1.5em;
+            border-radius: 3px;
+        }
+        .feature-list {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+        .feature-list li {
+            margin: 0.3em 0;
+        }
     </style>
 
     <script>
@@ -63,49 +77,86 @@ PAGE_TEMPLATE = """
 <body>
 
     <h1>df2tables: Multiple DataFrame Rendering Demo</h1>
+    <p>Explore different configurations and styling options for rendering pandas DataFrames as interactive DataTables.</p>
 
     <div id="tabs">
         <ul>
-            <li><a href="#tabs-1">Table 1</a></li>
-            <li><a href="#tabs-2">Table 2</a></li>
-            <li><a href="#tabs-3">Table 3</a></li>
-            <li><a href="#tabs-4">Table 4</a></li>
+            <li><a href="#tabs-1">Basic Display</a></li>
+            <li><a href="#tabs-2">Custom Layout</a></li>
+            <li><a href="#tabs-3">Scrollable View</a></li>
+            <li><a href="#tabs-4">Compact Format</a></li>
         </ul>
 
         <div id="tabs-1">
-            <p><strong>CSS Class:</strong> <code>display</code> | 
-               <strong>Wrapper Width:</strong> <code>fit-content</code> | 
-               <strong>Column Control:</strong> Enabled</p>
-               <p>The <a href="https://datatables.net/examples/styling/display.html" target="blank"><code>display</code></a> class is a short-cut for specifying the  <code>stripe hover order-column row-border </code>
+            <div class="tab-description">
+                <h3>Basic Display with Column Control</h3>
+                <p>This table demonstrates the standard DataTables appearance using the <code>display</code> CSS class, 
+                which provides a clean, professional look with striped rows and hover effects. The table width is constrained 
+                to fit its content, preventing unnecessary horizontal stretching.</p>
+                <ul class="feature-list">
+                    <li><strong>CSS Class:</strong> <code>display</code> - Applies stripe, hover, order-column, and row-border styles 
+                    (<a href="https://datatables.net/examples/styling/display.html" target="_blank">learn more</a>)</li>
+                    <li><strong>Wrapper Width:</strong> <code>fit-content</code> - Table adapts to content width</li>
+                    <li><strong>Column Control:</strong> Enabled - Users can show/hide columns dynamically</li>
+                    <li><strong>Pagination:</strong> Default (10 rows per page)</li>
+                </ul>
+            </div>
             <div class="fit-content-wrapper">
                 {{ table1_html | safe }}
             </div>
         </div>
 
         <div id="tabs-2">
-            <p><strong>CSS Class:</strong> <code>display compact hoover</code> | 
-               <strong>Wrapper Width:</strong> <code>fit-content</code> | 
-               <strong>Column Control:</strong> Enabled | 
-               <strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code>
-               <br>| <strong>Float precision:</strong><code> precision=4 </code>
-               </p>
+            <div class="tab-description">
+                <h3>Custom Layout with Numeric Formatting</h3>
+                <p>This configuration showcases advanced customization options including a reorganized control layout 
+                and enhanced numeric formatting. The compact styling reduces row height for displaying more data in 
+                less space, while maintaining readability.</p>
+                <ul class="feature-list">
+                    <li><strong>CSS Class:</strong> <code>display compact hover</code> - Combines standard display with reduced padding</li>
+                    <li><strong>Wrapper Width:</strong> <code>fit-content</code> - Optimized for content dimensions</li>
+                    <li><strong>Column Control:</strong> Enabled - Dynamic column visibility</li>
+                    <li><strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code> columns with 4 decimal places</li>
+                    <li><strong>Custom Layout:</strong> Controls repositioned - info at top-left, page length selector below, search at top-right</li>
+                </ul>
+            </div>
             <div class="fit-content-wrapper">
                 {{ table2_html | safe }}
             </div>
         </div>
 
         <div id="tabs-3">
-            <p><strong>CSS Class:</strong> <code>display</code> | 
-               <strong>Wrapper Width:</strong> Automatic | 
-               <strong>Column Control:</strong> Disabled</p>
+            <div class="tab-description">
+                <h3>Scrollable View Without Pagination</h3>
+                <p>This table replaces traditional pagination with vertical scrolling, ideal for continuously browsing 
+                data without page breaks. The scrollable container maintains a fixed viewport height while allowing 
+                seamless data exploration. A custom search placeholder demonstrates text localization capabilities.</p>
+                <ul class="feature-list">
+                    <li><strong>CSS Class:</strong> <code>display</code> - Standard DataTables styling</li>
+                    <li><strong>Wrapper Width:</strong> Automatic (full width)</li>
+                    <li><strong>Column Control:</strong> Disabled - Fixed column set</li>
+                    <li><strong>Pagination:</strong> Disabled - Replaced with vertical scrolling</li>
+                    <li><strong>Scroll Height:</strong> <code>50vh</code> (50% of viewport height) with collapse enabled</li>
+                    <li><strong>Custom Placeholder:</strong> Modified search input text for better user guidance</li>
+                </ul>
+            </div>
             {{ table3_html | safe }}
         </div>
 
         <div id="tabs-4">
-            <p><strong>CSS Class:</strong> <code>display compact</code> | 
-               <strong>Wrapper Width:</strong> Automatic | 
-               <strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code> | 
-               <strong>Column Control:</strong> Disabled</p>
+            <div class="tab-description">
+                <h3>Compact Format with Numeric Precision</h3>
+                <p>This minimal configuration prioritizes density and simplicity. The compact display style maximizes 
+                visible rows while numeric formatting ensures consistent presentation of decimal values. Column control 
+                is disabled to maintain a streamlined interface focused on data consumption.</p>
+                <ul class="feature-list">
+                    <li><strong>CSS Class:</strong> <code>display compact</code> - Space-efficient presentation</li>
+                    <li><strong>Wrapper Width:</strong> Automatic (full width)</li>
+                    <li><strong>Column Control:</strong> Disabled - Simplified interface</li>
+                    <li><strong>Numeric Formatting:</strong> Applied to <code>percentage</code> and <code>change</code> columns</li>
+                    <li><strong>Use Case:</strong> Best for embedded tables or dashboards where space is limited</li>
+                </ul>
+            </div>
             {{ table4_html | safe }}
         </div>
     </div>
@@ -185,6 +236,11 @@ app = Flask(__name__)
 def display_tables():
     """
     Renders four DataFrames with different styling and feature configurations.
+    Each table demonstrates a distinct use case:
+    - Table 1: Standard display with column control
+    - Table 2: Custom layout with numeric formatting
+    - Table 3: Scrollable view without pagination
+    - Table 4: Compact format for space-constrained environments
     """
     sample_df = generate_random_dataframe()
 
@@ -195,23 +251,43 @@ def display_tables():
         load_column_control=True,
     )
 
-    # Table 2: Compact styling, numeric formatting, with ColumnControl
+    # Table 2: Compact styling with custom layout and numeric formatting
+    cfg2 = {
+        'caption': 'Example of layout control - Custom options passed to table',
+        "layout": {
+            "topStart": "info",
+            "top1Start": 'pageLength',
+            "topEnd": "search", 
+        },
+    }    
     table2_html = df2tables.render_inline(
         sample_df.copy(),
         precision=4,
-        table_attrs={"id": uuid.uuid4().hex, "class": "display compact hoover"},
+        table_attrs={"id": uuid.uuid4().hex, "class": "display compact hover"},
         num_html=["percentage", "change"],
-        load_column_control=True,
+        load_column_control=True, 
+        js_opts=cfg2
     )
 
-    # Table 3: Default styling without ColumnControl
+    # Table 3: Scrollable view with custom search placeholder, no pagination
+    cfg3 = {
+        "language": {
+            "searchPlaceholder": "Custom search text"
+        },
+        'caption': 'Custom options passed to table',
+        "paging": False,
+        "scrollCollapse": True,
+        "scrollY": '60vh',
+        "scrollX": '50vw',
+    }
     table3_html = df2tables.render_inline(
         sample_df.copy(),
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
-        load_column_control=False,
+        load_column_control=False,  
+        js_opts=cfg3
     )
 
-    # Table 4: Compact + display classes, numeric formatting, no ColumnControl
+    # Table 4: Compact display with numeric formatting, no column control
     table4_html = df2tables.render_inline(
         sample_df.copy(),
         num_html=["percentage", "change"],
