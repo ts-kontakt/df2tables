@@ -24,7 +24,7 @@ render_inline(df, **kwargs)
 - Browse **large datasets** using filters and sorting
 - Works **independently of Jupyter or web servers** - viewable offline in any browser, portable and easy to share
 - Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
-- [Customization: Configuring DataTables from Python](https://github.com/ts-kontakt/df2tables/edit/main/README.md#customization-configuring-datatables-from-python)  **(new)** 
+- [Customization: Configuring DataTables from Python](#customization-configuring-datatables-from-python) **(new)**
 
 ## Screenshots
 
