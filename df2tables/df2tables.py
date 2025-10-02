@@ -228,6 +228,7 @@ def render(
     startfile=True,
     templ_path=TEMPLATE_PATH,
     load_column_control=True,
+    js_opts=None,
     display_logo=True,
 ):
     """
@@ -242,21 +243,12 @@ def render(
         startfile: Whether to open the file automatically after creation (default: True)
         templ_path: Path to custom HTML template (default: TEMPLATE_PATH)
         load_column_control: Include column control features (default: True)
+        js_opts`: Dictionary of [DataTables configuration options (default: None)
         display_logo: Show DataTables logo (default: True)
 
     Returns:
         str or None: File path if to_file is specified, HTML string if to_file is None,
                      or None on error
-
-    Raises:
-        ValueError: If precision is not an integer, num_html is not a list,
-                    or df is not a pandas/polars DataFrame
-
-    Example:
-        >>> import pandas as pd
-        >>> df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
-        >>> render(df, to_file='output.html', precision=1)
-        'output.html'
     """
     # Validate input parameters
     if not isinstance(precision, int) or precision < 0:
@@ -310,6 +302,11 @@ def render(
         template_vars["datatables_logo"] = ""
     if not load_column_control:
         template_vars["column_control"] = ""
+
+    if js_opts:
+        assert isinstance(js_opts, dict)
+        assert all(isinstance(key, str) for key in js_opts), "Not all keys are strings"
+        template_vars["js_opts"] = json.dumps(js_opts)
 
     html_content = _render_html_template(templ_path, template_vars)
 
@@ -381,7 +378,7 @@ def render_inline(df, table_attrs=None, **kwargs):
     return min_content
 
 
-def get_sample_df(df_type="pandas"):
+def get_sample_df(df_type="pandas", size=20):
     """
     Generates a sample DataFrame with diverse data types for testing.
     """
@@ -395,7 +392,6 @@ def get_sample_df(df_type="pandas"):
     healthcare = ["Low priority", "Medium priority", "High priority", "Emergency"]
     product = ["Premium", "Standard", "Budget"]
     grades = ["A", "B", "C", "D", "F"]
-    size = 7
 
     # Helper functions for random data generation
     def random_choice(options, k):
@@ -422,18 +418,23 @@ def get_sample_df(df_type="pandas"):
         import pandas as pd
 
         base_data["value"] = np.random.randn(size)
-        base_data["measurement"] = [-0.333, 1, -9, 4, 2, np.nan, 1111.111]
+        base_data["measurement"] = random_choice(
+            [-0.333, 1, -9, 4, 2, np.nan, random.randint(-1000, 10000)], size
+        )
 
         # Include edge cases: NaT, HTML, nested structures, NA values
-        base_data["description"] = [
-            np.datetime64("NaT"),
-            "<b>HTML content</b> is allowed",
-            {"A": [1, 2, 3, [4, 5]]},
-            np.timedelta64("NaT"),
-            pd.NaT,
-            pd.NA,
-            np.datetime64("2017-10-24"),
-        ]
+        base_data["description"] = random_choice(
+            [
+                np.datetime64("NaT"),
+                "<b>HTML content</b> is allowed",
+                {"A": [1, 2, 3, [4, 5]]},
+                np.timedelta64("NaT"),
+                pd.NaT,
+                pd.NA,
+                np.datetime64(datetime.datetime.now()),
+            ],
+            size,
+        )
 
         return pd.DataFrame(base_data)
 
@@ -443,18 +444,23 @@ def get_sample_df(df_type="pandas"):
 
         # Generate normally distributed random values without NumPy
         base_data["value"] = [random.gauss(0, 1) for _ in range(size)]
-        base_data["measurement"] = [-0.333, 1, -9, 4, 2, None, 1111.111]
+        base_data["measurement"] = random_choice(
+            [-0.333, 1, -9, 4, 2, None, 1111.111], size
+        )
 
         # Polars-compatible edge cases
-        base_data["description"] = [
-            "Lorem ipsum dolor sit amet",
-            "<b>HTML content</b> is allowed",
-            {"A": [1, 2, 3, [4, 5]]},
-            100.12345,
-            None,
-            float("nan"),
-            False,
-        ]
+        base_data["description"] = random_choice(
+            [
+                "Lorem ipsum dolor sit amet",
+                "<b>HTML content</b> is allowed",
+                {"A": [1, 2, 3, [4, 5]]},
+                100.12345,
+                None,
+                float("nan"),
+                False,
+            ],
+            size,
+        )
 
         return pl.DataFrame(base_data, strict=False)
 
