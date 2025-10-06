@@ -181,21 +181,8 @@ Simply pass a dictionary of DataTables options to the `js_opts` parameter in the
 
 ### Examples
 
-#### 1. Replace Paging with Scrolling
 
-Disable pagination and enable vertical and horizontal scrolling for easier navigation of large datasets.
-Note: Using "scrollY" with disabled paging can be slow for large DataFrames.
-```python
-scroll_cfg = {
-    "paging": False, #slow for large tables
-    "scrollCollapse": False,
-    "scrollY": '50vh',   #slow for large tables
-    "scrollX": "70vw"
-}
-df2t.render(df, js_opts=scroll_cfg, to_file="scrolling_table.html")
-```
-
-#### 2.  Customize Layout and Language
+#### 1.  Customize Layout and Language
 
 Rearrange control elements (such as the search bar and info display) using the `layout` option, or localize text:
 ```python
@@ -203,6 +190,7 @@ custom_cfg = {
     "language": {
         "searchPlaceholder": "Search in all text columns"
     },
+    "pageLength": 25, # number of table rows showing
     "layout": {
         "topStart": "info",
         "top1Start": "pageLength",
@@ -213,6 +201,23 @@ custom_cfg = {
 df2t.render(df, js_opts=custom_cfg, to_file="localized_table.html")
 
 ```
+#### 2. Replace Paging with Scrolling
+
+Disable pagination and enable vertical and horizontal scrolling for easier navigation of large datasets.
+
+_Note_: Using `scrollY` with disabled `paging` can be slow for large DataFrames.
+```python
+scroll_cfg = {
+    "paging": False, # slow for large tables
+    "scrollCollapse": False,
+    "scrollY": '50vh',  
+    "scrollX": "70vw"
+}
+df2t.render(df, js_opts=scroll_cfg, to_file="scrolling_table.html")
+```
+
+
+
 ### Error Handling
 
 Invalid keys are ignored by DataTables, so malformed or non-existent options **usually** will not break table rendering.
