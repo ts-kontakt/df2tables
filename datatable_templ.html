@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <!--[head-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DataFrame</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+    <!--[column_control-->
+    <link href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <!--column_control]-->
+    
+    <style>
+        body {
+            font-size: 0.875rem;
+            /* About 14px */
+            line-height: 1.4;
+            font-family: "Helvetica Neue",
+                Arial,
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        .dataTables_wrapper {
+            margin-top: 2rem;
+        }
+
+        td.dt-nowrap {
+            white-space: nowrap;
+        }
+
+        table.dataTable td {
+            white-space: nowrap;
+            font-size: 0.875rem;
+        }
+
+        table.dataTable td span {
+            float: right;
+        }
+
+        .dt-info {
+            padding: 1em;
+            font-size: 10pt;
+            color: gray;
+        }
+
+        custom.select {
+            color: black;
+            max-width: 15.5em;
+            margin: 1px;
+        }
+
+        table.dataTable span.dtcc span.dtcc-button-icon {
+            color: #000ee7;
+            --dt-row-selected-stripe-alpha: 0.99
+        }
+
+        :root {
+            --dtcc-button_opacity: 0.3;
+        }
+
+        .dtlogo {
+            opacity: 0.5;
+            width: auto;
+            display: block;
+            z-index: 2;
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            margin: 1em;
+        }
+
+        .dt-info {
+            padding: 0;
+            font-size: 9pt;
+            color: gray;
+        }
+
+        span.dt-column-title {
+            white-space: wrap;
+            font-weight: 600;
+            font-size: 0.87rem;
+            line-height: 1.1;
+        }
+
+
+        /* Default state */
+        .dt-input {
+            /*  border: 2px solid #ccc;
+        padding: 6px 10px; */
+            border-radius: 6px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Highlight only when user typed something */
+        input.dt-input:not(:placeholder-shown) {
+            background-color: #e0f0ff !important;
+            /* light blue */
+            border-color: #66b2ff !important;
+            font-weight: bold;
+        }
+
+        div.dtcc-title {
+            font-weight: 600;
+        }
+    </style>
+    <!--head]-->
+</head>
+
+<body>
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-md-1-1">
+
+            <div id="tabcnt" style="width: fit-content; margin-left: 1em">
+                <p><!--[title-->
+                    Example dataframe <!--title]--></p>  
+                <!--[table_markup--> 
+                <table id="pd_datatab" class="display compact hover order-column"></table>
+                <!--table_markup]-->
+                
+            </div>
+        </div>
+        <!--[min_content-->
+        <script type="text/javascript">
+        /* global DataTable, $, jQuery  */
+            (function() {
+
+                function deepMerge(target, source) {
+                    for (const key in source) {
+                        if (
+                            source[key] &&
+                            typeof source[key] === 'object' &&
+                            !Array.isArray(source[key])
+                        ) {
+                            if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+                                target[key] = {}; // ensure an object to merge into
+                            }
+                            deepMerge(target[key], source[key]);
+                        } else {
+                            target[key] = source[key];
+                        }
+                    }
+                    return target;
+                }
+
+                function _anyNumber(a) {
+                    var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
+                    if (typeof a === "string") {
+                        a = a.replace(",", ".").replace(/ /g, '').match(reg);
+                        a = a !== null ? parseFloat(a[0]) : Number.POSITIVE_INFINITY;
+                    }
+                    return a;
+                }
+
+
+                jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+                    "num-html-pre": function(a) {
+                        var x = String(a).replace(/<[\s\S]*?>/g, "");
+                        return parseFloat(_anyNumber(x));
+                    },
+
+                    "num-html-asc": function(a, b) {
+                        return a < b ? -1 : a > b ? 1 : 0;
+                    },
+
+                    "num-html-desc": function(a, b) {
+                        return a < b ? 1 : a > b ? -1 : 0;
+                    },
+                });
+
+                function search_info() {
+                    if (!search_columns || search_columns.length === 0) {
+                        return;
+                    }
+
+                    const searchableColumns = search_columns;
+                    const searchNote = $("<p>")
+                        .css({
+                            "margin-bottom": "0.5rem",
+                            "font-size": "0.7rem",
+                            color: "#667",
+                        })
+                        .text(
+                            "General search is enabled for: " +
+                            searchableColumns.map(col => `"${col}"`).join(", "),
+                        );
+                    $("#" + TABLE_ID + "_wrapper").prepend(searchNote);
+                }
+
+
+
+                const render_precision = /*[precision*/ 2 /*precision]*/ ;
+
+                const render_num = (data, type) => {
+                    const number = DataTable.render.number(" ", ",", render_precision).display(data);
+
+                    if (type !== "display") return number;
+
+                    const color = data < 0 ? "red" : "black";
+                    return '<span style="color:' + color + '">' + number + "</span>";
+                };
+                const tab_data =
+                    /*[tab_data*/
+                    [
+                        ["2025-09-11T08:27:01.989794", 0.09, "F", -0.33, -2000, "Premium", 2222222222, -1, "Emergency"],
+                        ["Lorem ipsum dolor sit amet, consectetur adipiscing", -0.59, "A", 1.0, -1, "Premium", "0", 1, "Medium priority"],
+                        ["<b>Integer</b> laoreet odio et.", 0.2, "D", -9.0, 2, "Budget", "1", 2, "Low priority"],
+                        [null, -0.49, "F", 4.0, 3, "Budget", "0", 1, "Low priority"],
+                        [" class 'datetime.datetime' ", -0.18, "A", 2.0, 4, "Standard", "1", 1, "Emergency"],
+                        [" NA ", -0.8, "A", 3.0, 5, "Premium", "0", 0, "High priority"],
+                        [
+                            ["C", {
+                                "a": 1
+                            }], -0.52, "B", 1111.11, 70000, "Budget", "0", 0, "High priority"
+                        ]
+                    ]
+                /*tab_data]*/
+
+                const columns =
+                    /*[tab_columns*/
+                    [{
+                        "title": "col 1a",
+                        "searchable": true,
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "search"]]
+                    }, {
+                        "title": "col 2",
+                        "searchable": true,
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "search"]],
+                        "render": render_num,
+                        "type": "num-html"
+                    }, {
+                        "title": "C 3",
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "searchList"]]
+                    }, {
+                        "title": "col4",
+                        "searchable": true,
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "search"]],
+                        "render": render_num,
+                        "type": "num-html"
+                    }, {
+                        "title": "col5",
+                        "searchable": true,
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "search"]],
+                        "render": render_num,
+                        "type": "num-html"
+                    }, {
+                        "title": "col6",
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "searchList"]]
+                    }, {
+                        "title": "col7",
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "searchList"]]
+                    }, {
+                        "title": "col8",
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "searchList"]]
+                    }, {
+                        "title": "col9",
+                        "orderable": true,
+                        "columnControl": ["order", ["title", "searchList"]]
+                    }]
+                /*tab_columns]*/
+
+                const search_columns =
+                    /*[search_columns*/
+                    ["col_1a", "C 3", "col6", "col7", "col9"]
+                /*search_columns]*/
+
+                const search_val = search_columns && search_columns.length > 0 ? "search" : null;
+
+                const custom_layout = {
+                    topStart: "info",
+                    top1Start: search_val,
+                    topEnd: "pageLength",
+                    bottomStart: null,
+                    bottomEnd: null,
+                    bottom: "paging",
+                };
+
+                const TABLE_ID = /*[table_id*/ "pd_datatab"
+                /*table_id]*/
+                ;
+
+                const locale_display = /*[locale_display*/ false/*locale_display]*/
+                
+                if (locale_display) {
+                    DataTable.type('date', 'render', DataTable.render.date());
+                    DataTable.type('num', 'render', DataTable.render.number());
+                }    
+                let config_opts = {
+                    data: tab_data,
+                    layout: custom_layout,
+                    autoWidth: false,
+                    columns: columns,
+                    pageLength: 100,
+                    responsive: true,
+                    order: false,
+                    processing: true,
+                    language: {
+                        "search": '_INPUT_',
+                        "searchPlaceholder": 'Search...'
+                    },
+                    initComplete: search_info
+                }
+
+                const custom_config_opts =  /*[js_opts*/ {
+                } /*js_opts]*/   
+
+                // Usage (mutates config_opts directly)
+                if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
+                    deepMerge(config_opts, custom_config_opts);
+                }
+
+                const build_table = function() {
+                    const table = $("#" + TABLE_ID).DataTable(config_opts);
+                };
+                $(document).ready(function() {
+                    build_table();
+
+                });
+            })();
+        </script> <!--min_content]-->
+        <!--[datatables_logo-->
+        <figure class="dtlogo">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Datatables_logo_square.png" width="20" style="display: block; margin-left: auto; margin-right: auto">
+            <figcaption style="text-align: center">
+                <small style="font-size: 9px"><a target="blank" href="https://datatables.net">DataTables.net</a></small>
+            </figcaption>
+        </figure><!--datatables_logo]-->
+    </div>
+</body>
+
+</html>
