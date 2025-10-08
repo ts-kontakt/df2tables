@@ -2,6 +2,7 @@
 <html>
 
 <head>
+   <!--[head-->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DataFrame</title>
@@ -12,7 +13,7 @@
     <link href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css" rel="stylesheet">
     <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
     <!--column_control]-->
-
+    
     <style>
         body {
             font-size: 0.875rem;
@@ -98,7 +99,7 @@
         }
 
         /* Highlight only when user typed something */
-        .dt-input:not(:placeholder-shown) {
+        input.dt-input:not(:placeholder-shown) {
             background-color: #e0f0ff !important;
             /* light blue */
             border-color: #66b2ff !important;
@@ -109,6 +110,7 @@
             font-weight: 600;
         }
     </style>
+    <!--head]-->
 </head>
 
 <body>
@@ -117,8 +119,11 @@
 
             <div id="tabcnt" style="width: fit-content; margin-left: 1em">
                 <p><!--[title-->
-                    Example dataframe <!--title]--></p>
+                    Example dataframe <!--title]--></p>  
+                <!--[table_markup--> 
                 <table id="pd_datatab" class="display compact hover order-column"></table>
+                <!--table_markup]-->
+                
             </div>
         </div>
         <!--[min_content-->
@@ -126,10 +131,16 @@
         /* global DataTable, $, jQuery  */
             (function() {
 
-                 function deepMerge(target, source) {
+                function deepMerge(target, source) {
                     for (const key in source) {
-                        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                            target[key] = target[key] || {};
+                        if (
+                            source[key] &&
+                            typeof source[key] === 'object' &&
+                            !Array.isArray(source[key])
+                        ) {
+                            if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+                                target[key] = {}; // ensure an object to merge into
+                            }
                             deepMerge(target[key], source[key]);
                         } else {
                             target[key] = source[key];
@@ -137,7 +148,6 @@
                     }
                     return target;
                 }
-
 
                 function _anyNumber(a) {
                     var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
@@ -273,7 +283,7 @@
                 const custom_layout = {
                     topStart: "info",
                     top1Start: search_val,
-                    topEnd: null,
+                    topEnd: "pageLength",
                     bottomStart: null,
                     bottomEnd: null,
                     bottom: "paging",
@@ -308,12 +318,10 @@
                 const custom_config_opts =  /*[js_opts*/ {
                 } /*js_opts]*/   
 
-                // Check if custom_config_opts is not empty and not false
+                // Usage (mutates config_opts directly)
                 if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
-                    /* Object.assign(config_opts, custom_config_opts);*/
-                    config_opts = deepMerge({ ...config_opts }, custom_config_opts);
+                    deepMerge(config_opts, custom_config_opts);
                 }
-
 
                 const build_table = function() {
                     const table = $("#" + TABLE_ID).DataTable(config_opts);

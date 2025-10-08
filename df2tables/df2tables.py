@@ -7,6 +7,7 @@ This module provides functionality to render DataFrames as interactive HTML tabl
 using the DataTables JavaScript library, with support for filtering, sorting, and searching.
 """
 
+import uuid
 import json
 import os
 import subprocess
@@ -39,6 +40,8 @@ __all__ = [
     "render_inline",
     "render_sample_df",
     "get_sample_df",
+    "load_datatables",
+    "render_nb",
 ]
 
 
@@ -294,6 +297,11 @@ def render(
         "tab_columns": columns_json,
         "search_columns": json.dumps(search_columns),
     }
+
+    # unique_id = f'"id_{uuid.uuid4().hex}"' #todo use uuid for all instances
+    # template_vars["table_id"] =  unique_id
+    # template_vars["table_markup"]  = f'<table id={unique_id} class="display compact hover order-column"></table>'
+
     if precision != 2:
         template_vars["precision"] = json.dumps(int(precision))
 
@@ -360,8 +368,6 @@ def render_inline(df, table_attrs=None, **kwargs):
 
     # Always render without file output
     html = render(df, to_file=None, **kwargs)
-
-    # Configure table attributes with defaults
     attrs = {
         "id": DEFAULT_TABLE_ID,
         "class": DEFAULT_TABLE_CLASS,
@@ -465,6 +471,48 @@ def get_sample_df(df_type="pandas", size=20):
         return pl.DataFrame(base_data, strict=False)
 
 
+def load_datatables():
+    import IPython.display as disp
+
+    html_content = _render_html_template(TEMPLATE_PATH, {})
+    head = comnt.get_tag_content("head", html_content)
+    disp.display(disp.HTML(head))
+
+
+def render_nb(df, mono=False, **kwargs):
+    import IPython.display as disp
+
+    monospace = """
+    font-family:
+        ui-monospace,
+        "SFMono-Regular",
+        "Menlo",
+        "Consolas",
+        "Liberation Mono",
+        "DejaVu Sans Mono",
+        "Ubuntu Mono",
+        "Noto Sans Mono",
+        monospace !important;
+    """
+
+    sans = """
+    font-family: "Arial", "Helvetica", "Liberation Sans", "Nimbus Sans", sans-serif !important;
+    """
+    font_style = monospace if mono else sans
+
+    attrs = {
+        "id": f"id_{uuid.uuid4().hex}",
+        "class": DEFAULT_TABLE_CLASS,
+        "style": f"width: auto; {font_style}",
+    }
+
+    html = render_inline(df, table_attrs=attrs, **kwargs)
+    div_style = """border-top: gray 1px solid;padding:1rem 0 1rem 0;
+    width: fit-content; width: -moz-fit-content; width: -webkit-fit-content; text-align: left;"""
+    html = f'<div style="{div_style}">{html}</div>'
+    disp.display(disp.HTML(html))
+
+
 def render_sample_df(df_type="pandas", to_file="df_table.html"):
     """
     Creates and renders a sample DataFrame for demonstration.
@@ -496,4 +544,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # print(load_dt())
+    # print(nrender(get_sample_df()))
+    # x
     main()
