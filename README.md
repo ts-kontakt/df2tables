@@ -64,7 +64,7 @@ load_datatables() # Keep this cell visible - it loads required JS/CSS
 
 render_nb(df) #show interactive table in jupyter notebook
 ```
-Note: Notebook rendering is currently supported only in Jupyter.
+*Note: Notebook rendering is currently supported only in Jupyter.*
 
 ## Main Functions
 ### render
