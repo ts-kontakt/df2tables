@@ -9,7 +9,7 @@ By rendering tables directly from JavaScript arrays, this tool delivers **fast p
 
 **Minimal dependencies**: only `pandas` ***or*** `polars` (you don’t need pandas installed if using polars).
 
-Converting a DataFrame into an interactive table is **just one function call**:
+Converting a DataFrame to an interactive table takes just one function call:
 
 ```python
 render(df, **kwargs) 
@@ -21,10 +21,10 @@ render_inline(df, **kwargs)
 
 - Converts `pandas` and `polars` dataframes interactive standalone HTML tables
 - **Web Framework Ready**: Specifically designed for easy embedding in Flask, Django, FastAPI, and other web frameworks
-- Browse **large datasets** using filters and sorting
-- Works **independently of Jupyter or web servers** - viewable offline in any browser, portable and easy to share
+- Browse **large datasets** using filters and sorting 
+- Works **independently of Jupyter**  or live server (though [notebook](#rendering-in-notebook) rendering  is supported) 
 - Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
-- [Customization: Configuring DataTables from Python](#customization-configuring-datatables-from-python) **(new)**
+- **Customization**: [Configuring DataTables from Python](#customization-configuring-datatables-from-python) *(new)*
 
 ## Screenshots
 
@@ -53,14 +53,18 @@ pip install df2tables
 ### Sample DataFrame
 
 ```python
-# Get sample DataFrame for testing
-sample_df = df2t.get_sample_df()
-
-# Generate and render sample DataFrame
+#render sample DataFrame
 html_string = df2t.render_sample_df(to_file="sample_table.html")
 ```
+### Rendering in notebook
+```python
+from df2tables import load_datatables, render_nb
 
-*Note: Pandas DataFrame indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call `df2tables.render(df.reset_index(), args...)`*
+load_datatables() # Keep this cell visible - it loads required JS/CSS
+
+render_nb(df) #show interactive table in jupyter notebook
+```
+Note: Notebook rendering is currently supported only in Jupyter.
 
 ## Main Functions
 ### render
@@ -169,7 +173,7 @@ def home():
 if __name__ == "__main__":
     app.run(debug=True)
 ```
-
+*Note: Pandas DataFrame indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call `df2tables.render(df.reset_index(), args...)`*
 
 ## Customization: Configuring DataTables from Python
 
@@ -279,16 +283,6 @@ The module includes error handling for:
 ## Appendix: Template Customization
 
 Templates use [comnt](https://github.com/ts-kontakt/comnt), a minimal markup system based on HTML/JS comments.
-One practical benefit: you can inject actual JavaScript-ready values from Python - not just strings:
-
-```html
-<!--[title-->
-My Table Title
-<!--title]-->
-
-const data = /*[tab_data*/ [...] /*tab_data]*/;
-```
-While [comnt](https://github.com/ts-kontakt/comnt) is used to ensure that the HTML template works independently (and avoid `JSON.parse`), you can also use other templating systems like Jinja2 by rendering the final content afterward.
 
 ### Custom Templates
 
