@@ -58,13 +58,11 @@ html_string = df2t.render_sample_df(to_file="sample_table.html")
 ```
 ### Rendering in notebook
 ```python
-from df2tables import load_datatables, render_nb
-
-load_datatables() # Keep this cell visible - it loads required JS/CSS
+from df2tables import  render_nb
 
 render_nb(df) #show interactive table in jupyter notebook
 ```
-*Note: Notebook rendering is currently supported only in Jupyter.*
+*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and marimo *
 
 ## Main Functions
 ### render
