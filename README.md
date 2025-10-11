@@ -62,7 +62,7 @@ from df2tables import  render_nb
 
 render_nb(df) #show interactive table in jupyter notebook
 ```
-*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and marimo *
+*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and marimo*
 
 ## Main Functions
 ### render
