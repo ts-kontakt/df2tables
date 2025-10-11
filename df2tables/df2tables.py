@@ -20,7 +20,7 @@ try:
     from importlib import resources
 
     TEMPLATE_PATH = resources.files("df2tables") / "datatable_templ.html"
-except ImportError:
+except (ImportError, AttributeError):
     TEMPLATE_PATH = Path(__file__).parent / "datatable_templ.html"
 
 try:
@@ -297,11 +297,6 @@ def render(
         "tab_columns": columns_json,
         "search_columns": json.dumps(search_columns),
     }
-
-    # unique_id = f'"id_{uuid.uuid4().hex}"' #todo use uuid for all instances
-    # template_vars["table_id"] =  unique_id
-    # template_vars["table_markup"]  = f'<table id={unique_id} class="display compact hover order-column"></table>'
-
     if precision != 2:
         template_vars["precision"] = json.dumps(int(precision))
 
@@ -314,6 +309,14 @@ def render(
     if js_opts:
         assert isinstance(js_opts, dict)
         assert all(isinstance(key, str) for key in js_opts), "Not all keys are strings"
+
+        if js_opts.pop("_unique_id", None):
+            unique_id = f'"id_{uuid.uuid4().hex}"'  # use uuid for all instances
+            template_vars["table_id"] = unique_id
+            template_vars["table_markup"] = (
+                f'<table id={unique_id} class="display compact hover order-column"></table>'
+            )
+
         template_vars["js_opts"] = json.dumps(js_opts)
 
     html_content = _render_html_template(templ_path, template_vars)
@@ -472,45 +475,45 @@ def get_sample_df(df_type="pandas", size=20):
 
 
 def load_datatables():
-    import IPython.display as disp
-
-    html_content = _render_html_template(TEMPLATE_PATH, {})
-    head = comnt.get_tag_content("head", html_content)
-    disp.display(disp.HTML(head))
+    """Deprecated: No longer needed since version 0.1.8"""
+    print("load_datatables() is not needed since version: 0.1.8")
 
 
-def render_nb(df, mono=False, **kwargs):
-    import IPython.display as disp
 
-    monospace = """
-    font-family:
-        ui-monospace,
-        "SFMono-Regular",
-        "Menlo",
-        "Consolas",
-        "Liberation Mono",
-        "DejaVu Sans Mono",
-        "Ubuntu Mono",
-        "Noto Sans Mono",
-        monospace !important;
+def render_nb(df, iframe=True, **kwargs):
     """
-
-    sans = """
-    font-family: "Arial", "Helvetica", "Liberation Sans", "Nimbus Sans", sans-serif !important;
+    Render a DataFrame as interactive HTML within a notebook environment.
     """
-    font_style = monospace if mono else sans
+    html_content = render(
+        df,
+        to_file=None,
+        title="",
+        display_logo=False,
+        js_opts={"_unique_id": True},
+        **kwargs,
+    )
+    html_content = html_content.replace('"', "&quot;")
+    # html_content = escape(html_content, quote=True)
+    iframe_content = \
+    f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:450px;border:none;"></iframe>'
 
-    attrs = {
-        "id": f"id_{uuid.uuid4().hex}",
-        "class": DEFAULT_TABLE_CLASS,
-        "style": f"width: auto; {font_style}",
-    }
+    try:
+        import IPython.display as disp
 
-    html = render_inline(df, table_attrs=attrs, **kwargs)
-    div_style = """border-top: gray 1px solid;padding:1rem 0 1rem 0;
-    width: fit-content; width: -moz-fit-content; width: -webkit-fit-content; text-align: left;"""
-    html = f'<div style="{div_style}">{html}</div>'
-    disp.display(disp.HTML(html))
+        if iframe:
+            disp.display(disp.HTML(iframe_content))
+        else:
+            disp.display(disp.HTML(html_content))
+
+    except ImportError:
+        try:
+            import marimo
+            # print("marimo")
+            return marimo.Html(iframe_content)
+        except ImportError:
+            print("Notebook expected.")
+            return None
+    return None
 
 
 def render_sample_df(df_type="pandas", to_file="df_table.html"):
@@ -529,6 +532,7 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         precision=3,
         title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
         num_html=["revenue", "measurement", "value"],
+        js_opts={"_unique_id": True},
     )
 
 
@@ -544,7 +548,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # print(load_dt())
-    # print(nrender(get_sample_df()))
-    # x
     main()
