@@ -3,18 +3,21 @@
 """
 df2tables: Convert pandas/polars DataFrames to interactive HTML DataTables.
 
+https://datatables.net/extensions/columncontrol/custom
+
 This module provides functionality to render DataFrames as interactive HTML tables
 using the DataTables JavaScript library, with support for filtering, sorting, and searching.
 """
 
-import uuid
 import json
 import os
 import subprocess
 import sys
+import uuid
 import warnings
 from html import escape
 from pathlib import Path
+from re import sub
 
 try:
     from importlib import resources
@@ -94,6 +97,13 @@ def html_tag(tag, content="", attrs=None, self_closing=False):
     if self_closing:
         return f"<{tag}{attr_str} />"
     return f"<{tag}{attr_str}>{content}</{tag}>"
+
+
+def minify(html):
+    html = html.replace("\n", "")
+    html = sub("\\s{2,}", " ", html)
+    html = html.replace("> <", "><")
+    return html
 
 
 def _prepare_dataframe(df, precision):
@@ -287,15 +297,15 @@ def render(
         raise ValueError("DataFrame is empty or could not be processed")
 
     # Prepare JSON data with special handling for JS function references
-    columns_json = json.dumps(columns_defs).replace(
-        f'"{RENDER_NUM_FUNC}"', RENDER_NUM_FUNC.strip("#")
-    )
+    columns_json = json.dumps(
+        columns_defs, separators=(",", ":"), ensure_ascii=False
+    ).replace(f'"{RENDER_NUM_FUNC}"', RENDER_NUM_FUNC.strip("#"))
 
     template_vars = {
         "title": str(title),
-        "tab_data": json.dumps(data_arrays, cls=DataJSONEncoder),
+        "tab_data": json.dumps(data_arrays, cls=DataJSONEncoder, separators=(",", ":")),
         "tab_columns": columns_json,
-        "search_columns": json.dumps(search_columns),
+        "search_columns": json.dumps(search_columns, separators=(",", ":")),
     }
     if precision != 2:
         template_vars["precision"] = json.dumps(int(precision))
@@ -320,6 +330,7 @@ def render(
         template_vars["js_opts"] = json.dumps(js_opts)
 
     html_content = _render_html_template(templ_path, template_vars)
+    # html_content = minify(html_content)
 
     # Return HTML string if no file output requested
     if not to_file:
@@ -479,7 +490,6 @@ def load_datatables():
     print("load_datatables() is not needed since version: 0.1.8")
 
 
-
 def render_nb(df, iframe=True, **kwargs):
     """
     Render a DataFrame as interactive HTML within a notebook environment.
@@ -494,8 +504,7 @@ def render_nb(df, iframe=True, **kwargs):
     )
     html_content = html_content.replace('"', "&quot;")
     # html_content = escape(html_content, quote=True)
-    iframe_content = \
-    f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:450px;border:none;"></iframe>'
+    iframe_content = f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:450px;border:none;"></iframe>'
 
     try:
         import IPython.display as disp
@@ -508,6 +517,7 @@ def render_nb(df, iframe=True, **kwargs):
     except ImportError:
         try:
             import marimo
+
             # print("marimo")
             return marimo.Html(iframe_content)
         except ImportError:
@@ -532,6 +542,7 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         precision=3,
         title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
         num_html=["revenue", "measurement", "value"],
+        load_column_control=True,
         js_opts={"_unique_id": True},
     )
 
