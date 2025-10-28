@@ -2,9 +2,6 @@
 # coding=utf8
 """
 df2tables: Convert pandas/polars DataFrames to interactive HTML DataTables.
-
-https://datatables.net/extensions/columncontrol/custom
-
 This module provides functionality to render DataFrames as interactive HTML tables
 using the DataTables JavaScript library, with support for filtering, sorting, and searching.
 """
@@ -32,9 +29,6 @@ except ImportError:
     import comnt
 
 # Configuration constants
-DROPDOWN_SELECT_THRESHOLD = 9  # Max unique values for dropdown filters
-DEFAULT_TABLE_ID = "pd_datatab"
-DEFAULT_TABLE_CLASS = "display compact hover order-column"
 RENDER_NUM_FUNC = "#render_num"  # Placeholder for JS function injection
 
 __all__ = [
@@ -46,6 +40,26 @@ __all__ = [
     "load_datatables",
     "render_nb",
 ]
+BUTT_VER = "3.2.5"
+BUTTONS_URLS = f"""
+<link href="https://cdn.datatables.net/buttons/{BUTT_VER}/css/buttons.dataTables.min.css" 
+    rel="stylesheet">
+<script src="https://cdn.datatables.net/buttons/{BUTT_VER}/js/dataTables.buttons.min.js">
+</script>
+<script src="https://cdn.datatables.net/buttons/{BUTT_VER}/js/buttons.html5.min.js">
+</script>
+"""
+
+
+def html_tag(tag, content="", attrs=None, self_closing=False):
+    """
+    Generates an HTML tag with optional attributes and content.
+    """
+    attrs = attrs or {}
+    attr_str = "".join(f' {k}="{escape(str(v), quote=True)}"' for k, v in attrs.items())
+    if self_closing:
+        return f"<{tag}{attr_str} />"
+    return f"<{tag}{attr_str}>{content}</{tag}>"
 
 
 def open_file(filename):
@@ -86,17 +100,6 @@ class DataJSONEncoder(json.JSONEncoder):
         except (TypeError, ValueError):
             # Fallback: convert to safe string representation
             return escape(repr(obj))
-
-
-def html_tag(tag, content="", attrs=None, self_closing=False):
-    """
-    Generates an HTML tag with optional attributes and content.
-    """
-    attrs = attrs or {}
-    attr_str = "".join(f' {k}="{escape(str(v), quote=True)}"' for k, v in attrs.items())
-    if self_closing:
-        return f"<{tag}{attr_str} />"
-    return f"<{tag}{attr_str}>{content}</{tag}>"
 
 
 def minify(html):
@@ -142,7 +145,7 @@ def _prepare_dataframe(df, precision):
     return df_copy
 
 
-def _generate_column_defs(df, num_html, load_column_control):
+def _generate_column_defs(df, num_html, load_column_control, dropdown_select_threshold):
     """
     Generates DataTables column definitions with appropriate search controls.
 
@@ -165,13 +168,13 @@ def _generate_column_defs(df, num_html, load_column_control):
             nunique = df[col].nunique()
         except TypeError:
             # If unhashable, default to text search
-            nunique = DROPDOWN_SELECT_THRESHOLD
+            nunique = dropdown_select_threshold
 
         col_cleaned = col.replace("_", " ")
         col_def = {"title": col_cleaned, "orderable": True}
 
         # Configure search type based on cardinality
-        if nunique < DROPDOWN_SELECT_THRESHOLD:
+        if nunique < dropdown_select_threshold:
             # Low cardinality: use dropdown filter
             if load_column_control:
                 col_def["columnControl"] = ["order", ["title", "searchList"]]
@@ -190,18 +193,15 @@ def _generate_column_defs(df, num_html, load_column_control):
     return columns
 
 
-def process_pandas(df, precision, num_html, load_column_control):
+def process_pandas(df, precision, num_html, load_column_control, dropdown_select_threshold):
     """
     Complete processing pipeline for pandas DataFrames.
     """
     df_prepared = _prepare_dataframe(df, precision)
-    columns_defs = _generate_column_defs(
-        df_prepared, num_html or [], load_column_control
-    )
+    columns_defs = _generate_column_defs(df_prepared, num_html or [], load_column_control,
+                                         dropdown_select_threshold)
     data_arrays = df_prepared.values.tolist()
-    search_columns = list(
-        df_prepared.select_dtypes(include=["object", "string"]).columns
-    )
+    search_columns = list(df_prepared.select_dtypes(include=["object", "string"]).columns)
 
     return data_arrays, columns_defs, search_columns
 
@@ -223,51 +223,79 @@ def _render_html_template(template_path, template_vars):
         return comnt.render(template_str, template_vars)
     except FileNotFoundError:
         print(f"Template file not found at: {template_path}")
-        print(
-            "Ensure the template exists or provide a custom path via 'templ_path' parameter."
-        )
+        print("Ensure the template exists or provide a custom path via 'templ_path' parameter.")
         return ""
     except Exception as e:
         print(f"Error rendering template: {type(e).__name__}: {e}")
         return ""
 
 
+DEPRECATED_ARGS = {
+    "load_column_control",
+    "display_logo",
+}
+
+DEFAULT_RENDER_OPTS = {
+    "locale_fmt": False,  
+    "dropdown_select_threshold": 9,  # max unique values for dropdown filters
+    "table_id": "pd_datatab",
+    "unique_id": False,
+    "default_table_class": "display compact hover order-column",
+    "load_column_control": True,
+    "display_logo": False,
+}
+
+
 def render(
     df,
     to_file="datatable.html",
-    title="DataFrame",
+    title="",
+    startfile=True,
     precision=2,
     num_html=None,
-    startfile=True,
-    templ_path=TEMPLATE_PATH,
-    load_column_control=True,
+    copy_button=False,
+    render_opts=None,
     js_opts=None,
-    display_logo=True,
+    templ_path=TEMPLATE_PATH,
+    **kwargs,
 ):
     """
     Renders a pandas or polars DataFrame as an interactive HTML DataTable.
-
-    Args:
-        df: DataFrame to render (pandas or polars)
-        to_file: Output HTML file path, or None to return HTML string (default: 'datatable.html')
-        title: HTML page title (default: 'DataFrame')
-        precision: Decimal places for numeric rounding (default: 2)
-        num_html: List of column names to render with numeric HTML formatting (default: None)
-        startfile: Whether to open the file automatically after creation (default: True)
-        templ_path: Path to custom HTML template (default: TEMPLATE_PATH)
-        load_column_control: Include column control features (default: True)
-        js_opts`: Dictionary of [DataTables configuration options (default: None)
-        display_logo: Show DataTables logo (default: True)
 
     Returns:
         str or None: File path if to_file is specified, HTML string if to_file is None,
                      or None on error
     """
+    final_opts = DEFAULT_RENDER_OPTS.copy()
+    passed_deprecated = {}
+
+    for key, value in kwargs.items():
+        if key in DEPRECATED_ARGS:
+            passed_deprecated[key] = value
+        else:
+            # Optional: Warn about unexpected arguments
+            warnings.warn(f"Unknown argument '{key}' passed to render().", UserWarning)
+
+    # Update defaults with any deprecated args found
+    if passed_deprecated:
+        final_opts.update(passed_deprecated)
+        arg_names = ", ".join(passed_deprecated.keys())
+        # warnings.warn(
+        print(
+            f"\nPassing arguments like [{arg_names}] directly is deprecated and "
+            "will be removed in a future version. "
+            "Please use the 'render_opts' dictionary instead.",)
+
+    # The new 'render_opts' dictionary (if provided) OVERRIDES everything else
+    if render_opts:
+        final_opts.update(render_opts)
+    load_column_control = final_opts["load_column_control"]
+    display_logo = final_opts["display_logo"]
+    dropdown_select_threshold = final_opts["dropdown_select_threshold"]
+
     # Validate input parameters
     if not isinstance(precision, int) or precision < 0:
-        raise ValueError(
-            f"precision must be an integer, got: {type(precision).__name__}"
-        )
+        raise ValueError(f"precision must be an integer, got: {type(precision).__name__}")
 
     if num_html and not isinstance(num_html, list):
         raise ValueError(f"num_html must be a list, got: {type(num_html).__name__}")
@@ -276,30 +304,27 @@ def render(
     mod_name = type(df).__module__
     data_arrays, columns_defs, search_columns = None, None, None
     if "pandas" in mod_name:
-        data_arrays, columns_defs, search_columns = process_pandas(
-            df, precision, num_html, load_column_control
-        )
+        data_arrays, columns_defs, search_columns = process_pandas(df, precision, num_html,
+                                                                   load_column_control,
+                                                                   dropdown_select_threshold)
     elif "polars" in mod_name:
         try:
             from . import tablepl
         except ImportError:
             import tablepl
         data_arrays, columns_defs, search_columns = tablepl.process_pl(
-            df, precision, num_html, load_column_control, DROPDOWN_SELECT_THRESHOLD
-        )
+            df, precision, num_html, load_column_control, dropdown_select_threshold)
     else:
-        raise ValueError(
-            f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
-            "Expected pandas or polars DataFrame."
-        )
+        raise ValueError(f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
+                         "Expected pandas or polars DataFrame.")
 
     if not data_arrays:
         raise ValueError("DataFrame is empty or could not be processed")
 
     # Prepare JSON data with special handling for JS function references
-    columns_json = json.dumps(
-        columns_defs, separators=(",", ":"), ensure_ascii=False
-    ).replace(f'"{RENDER_NUM_FUNC}"', RENDER_NUM_FUNC.strip("#"))
+    columns_json = json.dumps(columns_defs, separators=(",", ":"),
+                              ensure_ascii=False).replace(f'"{RENDER_NUM_FUNC}"',
+                                                          RENDER_NUM_FUNC.strip("#"))
 
     template_vars = {
         "title": str(title),
@@ -309,6 +334,17 @@ def render(
     }
     if precision != 2:
         template_vars["precision"] = json.dumps(int(precision))
+        
+    if final_opts.pop("locale_fmt", None):
+        template_vars["locale_fmt"] = json.dumps(True)
+
+    if final_opts.pop("unique_id", None):
+        unique_id = f'"id_{uuid.uuid4().hex}"'  # use uuid for all instances
+        template_vars["table_id"] = unique_id
+        template_vars["table_markup"] = (
+            f'<table id={unique_id} class="display compact hover order-column"></table>')
+    else:
+        pass
 
     # Configure optional template features
     if not display_logo:
@@ -319,24 +355,26 @@ def render(
     if js_opts:
         assert isinstance(js_opts, dict)
         assert all(isinstance(key, str) for key in js_opts), "Not all keys are strings"
+    else:
+        js_opts = {}
 
-        if js_opts.pop("_unique_id", None):
-            unique_id = f'"id_{uuid.uuid4().hex}"'  # use uuid for all instances
-            template_vars["table_id"] = unique_id
-            template_vars["table_markup"] = (
-                f'<table id={unique_id} class="display compact hover order-column"></table>'
-            )
+    if copy_button:
+        template_vars["buttons"] = BUTTONS_URLS
+        button_loc = {"topEnd": [{"buttons": ["copy"]}, "pageLength"]}
 
-        template_vars["js_opts"] = json.dumps(js_opts)
+        if "layout" in js_opts:
+            js_opts["layout"].update(button_loc)
+        else:
+            js_opts["layout"] = button_loc
+
+    template_vars["js_opts"] = json.dumps(js_opts)
 
     html_content = _render_html_template(templ_path, template_vars)
     # html_content = minify(html_content)
 
-    # Return HTML string if no file output requested
     if not to_file:
         return html_content
 
-    # Write HTML to file
     try:
         with open(to_file, "w", encoding="utf-8") as outfile:
             outfile.write(html_content)
@@ -373,18 +411,15 @@ def render_inline(df, table_attrs=None, **kwargs):
     # Validate arguments and warn about ignored parameters
     if kwargs.pop("to_file", None):
         warnings.warn(
-            "'to_file' argument is ignored in render_inline - output is always returned as string"
-        )
+            "'to_file' argument is ignored in render_inline - output is always returned as string")
     if kwargs.pop("title", None):
-        warnings.warn(
-            "'title' argument is ignored in render_inline - no page title in inline mode"
-        )
+        warnings.warn("'title' argument is ignored in render_inline - no page title in inline mode")
 
     # Always render without file output
     html = render(df, to_file=None, **kwargs)
     attrs = {
-        "id": DEFAULT_TABLE_ID,
-        "class": DEFAULT_TABLE_CLASS,
+        "id": DEFAULT_RENDER_OPTS["table_id"],
+        "class": DEFAULT_RENDER_OPTS["default_table_class"],
         **(table_attrs or {}),
     }
 
@@ -422,9 +457,7 @@ def get_sample_df(df_type="pandas", size=20):
 
     # Base data common to both DataFrame types
     base_data = {
-        "timestamp": [
-            (datetime.datetime.now() - datetime.timedelta(days=i)) for i in range(size)
-        ],
+        "timestamp": [(datetime.datetime.now() - datetime.timedelta(days=i)) for i in range(size)],
         "grade": random_choice(grades, size),
         "revenue": [random.randint(-2000, 70000) for _ in range(size)],
         "product_type": random_choice(product, size),
@@ -439,15 +472,16 @@ def get_sample_df(df_type="pandas", size=20):
 
         base_data["value"] = np.random.randn(size)
         base_data["measurement"] = random_choice(
-            [-0.333, 1, -9, 4, 2, np.nan, random.randint(-1000, 10000)], size
-        )
+            [-0.333, 1, -9, 4, 2, np.nan, random.randint(-1000, 10000)], size)
 
         # Include edge cases: NaT, HTML, nested structures, NA values
         base_data["description"] = random_choice(
             [
                 np.datetime64("NaT"),
                 "<b>HTML content</b> is allowed",
-                {"A": [1, 2, 3, [4, 5]]},
+                {
+                    "A": [1, 2, 3, [4, 5]]
+                },
                 np.timedelta64("NaT"),
                 pd.NaT,
                 pd.NA,
@@ -464,16 +498,16 @@ def get_sample_df(df_type="pandas", size=20):
 
         # Generate normally distributed random values without NumPy
         base_data["value"] = [random.gauss(0, 1) for _ in range(size)]
-        base_data["measurement"] = random_choice(
-            [-0.333, 1, -9, 4, 2, None, 1111.111], size
-        )
+        base_data["measurement"] = random_choice([-0.333, 1, -9, 4, 2, None, 1111.111], size)
 
         # Polars-compatible edge cases
         base_data["description"] = random_choice(
             [
                 "Lorem ipsum dolor sit amet",
                 "<b>HTML content</b> is allowed",
-                {"A": [1, 2, 3, [4, 5]]},
+                {
+                    "A": [1, 2, 3, [4, 5]]
+                },
                 100.12345,
                 None,
                 float("nan"),
@@ -497,9 +531,7 @@ def render_nb(df, iframe=True, **kwargs):
     html_content = render(
         df,
         to_file=None,
-        title="",
-        display_logo=False,
-        js_opts={"_unique_id": True},
+        render_opts={"unique_id": True, 'display_logo': False},
         **kwargs,
     )
     html_content = html_content.replace('"', "&quot;")
@@ -540,9 +572,15 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         df,
         to_file=to_file,
         precision=3,
-        title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
-        num_html=["revenue", "measurement", "value"],
-        load_column_control=True,
+        num_html=["measurement", "value"], #"revenue", 
+        copy_button=1,
+        render_opts={
+            "locale_fmt": False,
+            "unique_id": 1,
+            "title": f"Example <b>{df_type.capitalize()}</b> DataFrame",
+            "load_column_control": 1,
+            "dropdown_select_threshold": 12,
+        },
         js_opts={"_unique_id": True},
     )
 

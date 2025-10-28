@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <!--[head-->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
@@ -8,13 +7,11 @@
     <title>DataFrame</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
-    <!--[column_control-->
-    <link href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
-
-    <!--  <script src="cc.js"></script>  -->
-    <!--column_control]-->
+    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script><!--[column_control-->
+    <link href="https://cdn.datatables.net/columncontrol/1.1.1/css/columnControl.dataTables.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/columncontrol/1.1.1/js/dataTables.columnControl.min.js"></script><!--column_control]-->
+    <!--[buttons-->
+    <!--buttons]-->
 
     <style>
         body {
@@ -29,6 +26,11 @@
             text-rendering: optimizeLegibility;
         }
 
+        :root {
+            
+            --table_border: 1px solid rgba(34, 36, 38, .1);
+        }
+
         .dataTables_wrapper {
             margin-top: 2rem;
         }
@@ -37,9 +39,24 @@
             white-space: nowrap;
         }
 
+        table.dataTable {
+            border: var(--table_border);
+
+
+
+        }
+
+        table.dataTable thead td {
+            border-left: var(--table_border);
+        }
+
         table.dataTable td {
             white-space: nowrap;
             font-size: 0.875rem;
+            border-left: var(--table_border);
+            max-width: 15rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         table.dataTable td span {
@@ -50,6 +67,12 @@
             padding: 1em;
             font-size: 10pt;
             color: gray;
+            display: flex;
+            align-items: center;
+            /* vertically align contents */
+            gap: 6px;
+            /* optional spacing */
+
         }
 
         custom.select {
@@ -58,20 +81,8 @@
             margin: 1px;
         }
 
-        table.dataTable span.dtcc span.dtcc-button-icon {
-            color: #000ee7;
-            --dt-row-selected-stripe-alpha: 0.99
-        }
 
-        /*:root {
-            --dtcc-button_opacity: 0.3;
-        } */
 
-        table.dataTable span.dtcc button.dtcc-button_active {
-            opacity: 1;
-            color: red !important;
-
-        }
 
         .dtlogo {
             opacity: 0.5;
@@ -101,7 +112,7 @@
         /* Default state */
         .dt-input {
             /*  border: 2px solid #ccc;
-        padding: 6px 10px; */
+            padding: 6px 10px; */
             border-radius: 6px;
             transition: all 0.2s ease-in-out;
         }
@@ -113,38 +124,68 @@
             border-color: #66b2ff !important;
             font-weight: bold;
         }
+        
+        input[type="search"]::-webkit-search-cancel-button {
+            -webkit-appearance: auto;
+            appearance: auto ;
+            cursor: pointer;
+        }
+        
 
         div.dtcc-title {
             font-weight: 600;
         }
-    </style>
-    <!--head]-->
-</head>
 
+        table.dataTable span.dtcc span.dtcc-button-icon {
+            color:   #0A2540;
+            /* #0A2540  #00457C #0D47A1  #0A3D62 #052C65 */
+            --dt-row-selected-stripe-alpha: 0.99
+        }
+
+
+
+        .clear-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: 3px 4px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: #f7f7f7;
+            border-radius: 3px;
+        }
+
+        .clear-btn .icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clear-btn:hover {
+            background: #e9e9e9;
+        }
+    </style><!--head]-->
+</head>
 <body>
     <div class="pure-g">
         <div class="pure-u-1 pure-u-md-1-1">
-
             <div id="tabcnt" style="width: fit-content; margin-left: 1em">
                 <p><!--[title-->
-                    Example dataframe <!--title]--></p>
-                <!--[table_markup-->
-                <table id="pd_datatab" style="width:auto;" class="display compact hover order-column"></table>
-                <!--table_markup]-->
-
+                 Example dataframe <!--title]--></p><!--[table_markup-->
+                <table id="pd_datatab" style="width:auto;" class="display compact hover order-column"></table><!--table_markup]-->
             </div>
-        </div>
-        <!--[min_content-->
+        </div><!--[min_content-->
         <script type="text/javascript">
- /* global DataTable, $, jQuery  */
+   /* global DataTable, $, jQuery  */
 (function() {
     /* https://datatables.net/extensions/columncontrol/examples/styling/alignmentHeaderOnly.html */
     DataTable.type("num", "className", "dt-body-right");
     DataTable.type("num-fmt", "className", "dt-body-right");
     DataTable.type("date", "className", "dt-body-right");
     if (DataTable.ColumnControl) {
-        const active_funnel = '<svg data-descr="funnel_menu" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + '<rect x="0" y="0" width="30" height="30" rx="4" fill="#1976d2"/>' + '<path d="M12.9 20.9a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 16.9 21.9v-6a2 2 0 0 1 .517-1.341L23.4 9.17A1 1 0 0 0 22.7 7.5H7.3A1 1 0 0 0 6.6 9.17l7.225 7.989A2 2 0 0 1 12.9 14.5z"/>' + "</svg>";
-        const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" data-descr="funnel_menu" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
+        const active_funnel = '<svg id="funnel_menu_a" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-icon lucide-funnel"> <rect x="-4" y="-4" width="32" height="32" fill="#0B57D0"/> <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/> </svg> ';
+        const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" id="funnel_menu_p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
         DataTable.ColumnControl.icons["menu"] = inactive_funnel;
         DataTable.ColumnControl.Button.prototype._checkActive = function() {
             var curr_icon = this._dom.icon.innerHTML || "";
@@ -288,39 +329,53 @@
     };
     const TABLE_ID = /*[table_id*/ "pd_datatab"
     /*table_id]*/;
-    const locale_display = /*[locale_display*/ false /*locale_display]*/;
-    if (locale_display) {
+    const locale_fmt = /*[locale_fmt*/ false /*locale_fmt]*/;
+    if (locale_fmt) {
         DataTable.type("date", "render", DataTable.render.date());
         DataTable.type("num", "render", DataTable.render.number());
     }
-    let config_opts = {
+    const clearButton = '<button id="custom_clear1" class="clear-btn"><span class="icon"><svg id="custom_clear2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
+    const clearButton2 = '<button id="custom_clear1" class="clear-btn"><span class="icon">' + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' + "</span>Clear all</button>";
+    let table_opts = {
         data: tab_data,
         layout: custom_layout,
         autoWidth: false,
         columns: columns,
-        pageLength: 100,
+        pageLength: 50,
         responsive: true,
         order: false,
         processing: true,
         language: {
             search: "_INPUT_",
             searchPlaceholder: "Search...",
+            sInfoFiltered: "(filtered from _MAX_ total _ENTRIES-MAX_ ) " + clearButton
         },
         initComplete: search_info
     };
     const custom_config_opts = /*[js_opts*/ {} /*js_opts]*/;
     if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
-        deepMerge(config_opts, custom_config_opts);
+        deepMerge(table_opts, custom_config_opts);
     }
     const build_table = function() {
-        let table = $("#" + TABLE_ID).DataTable(config_opts);
+        let table = $("#" + TABLE_ID).DataTable(table_opts);
+        $(document).on("click", e => {
+            console.log(e.target);
+            if (e.target.id.includes("custom_clear")) {
+                try {
+                    table.search("").columns().columnControl.searchClear().draw();
+                } catch (err) {
+                    console.log(err);
+                    table.search("").draw();
+                }
+            }
+        });
     };
     $(document).ready(function() {
         build_table();
     });
 })();
         </script> <!--min_content]-->
-        <!--[datatables_logo-->
+         <!--[datatables_logo-->
         <figure class="dtlogo">
             <img src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Datatables_logo_square.png" width="20" style="display: block; margin-left: auto; margin-right: auto">
             <figcaption style="text-align: center">
@@ -329,5 +384,4 @@
         </figure><!--datatables_logo]-->
     </div>
 </body>
-
 </html>
