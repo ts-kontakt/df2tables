@@ -100,7 +100,7 @@ df2t.render(
 
 Possible additional options can be set in `render_opts` dictionary:
 
-  - `locale_fmt` (bool): Enable locale-based number formatting (default: False)
+  - `locale_fmt` (bool): Enable locale-based numbers and dates formatting (default: False)
   - `dropdown_select_threshold` (int): Maximum unique values for dropdown filters (default: 9)
   - `table_id` (str): HTML ID for the table element (default: "pd_datatab")
   - `unique_id` (bool): Generate unique UUID-based table ID (default: False)
