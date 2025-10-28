@@ -114,11 +114,6 @@ Possible additional options can be set in `render_opts` dictionary:
 - HTML string if `to_file=None`
 - None on error
 
-**Notes:**
-- The function now supports both pandas and polars DataFrames
-- Direct passing of `load_column_control` and `display_logo` as keyword arguments is deprecated; use the `render_opts` dictionary instead
-- When `copy_button=True`, the DataTables Buttons extension is automatically configured
-
 ### render_inline
 
 ```python
