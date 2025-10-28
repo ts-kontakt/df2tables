@@ -69,32 +69,55 @@ render_nb(df) #show interactive table in jupyter notebook
 ```python
 df2t.render(
     df: pd.DataFrame,
-    to_file: Optional[str] = None,
-    title: str = "Title",
-    precision: int = 2,
-    num_html: List[str] = None,
+    to_file: str = "datatable.html",
+    title: str = "",
     startfile: bool = True,
-    templ_path: str = TEMPLATE_PATH,
-    load_column_control: bool = True,
+    precision: int = 2,
+    num_html: Optional[List[str]] = None,
+    copy_button: bool = False,
+    render_opts: Optional[dict] = None,
     js_opts: Optional[dict] = None,
-    display_logo: bool = True
-) -> Union[str, file_object]
+    templ_path: str = TEMPLATE_PATH,
+    **kwargs
+) -> Union[str, None]
 ```
 **Parameters:**
-- `df`: Input pandas DataFrame
-- `to_file`: Output HTML file path. If None, returns HTML string instead of writing file
-- `title`: Title for the HTML table
-- `precision`: Number of decimal places for floating-point numbers
-- `num_html`: List of numeric column names to render with color-coded HTML formatting (negative values in red)
-- `startfile`: If True, automatically opens the generated HTML file in default browser
+- `df`: Input pandas or polars DataFrame
+- `to_file`: Output HTML file path (default: "datatable.html"). If None, returns HTML string instead of writing file
+- `title`: Title for the HTML table (default: "")
+- `startfile`: If True, automatically opens the generated HTML file in default browser (default: True)
+- `precision`: Number of decimal places for floating-point numbers (default: 2)
+- `num_html`: List of numeric column names to render with color-coded HTML formatting (negative values in red) (default: None)
+- `copy_button`: If True, adds a copy button to the table toolbar (default: False)
+- `render_opts`: Dictionary of [additional](#additional-options)  rendering configuration options (default: None)
+- `js_opts`: Dictionary of [DataTables configuration options](https://datatables.net/reference/option/) to customize table behavior (e.g., pagination, scrolling, layout, language) (default: None)
 - `templ_path`: Path to custom HTML template (uses default if not specified)
-- `load_column_control`: If True, integrates the [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/) programmatically for enhanced filtering and search capabilities (default: True)
-- `js_opts`: Dictionary of [DataTables configuration options](https://datatables.net/reference/option/) to customize table behavior (e.g., pagination, scrolling, layout, language).(default: None)
-- `display_logo`: If True, displays DataTables logo (default: True)
+- `**kwargs`: 
+
+
+
+### Additional options
+
+Possible additional options can be set in `render_opts` dictionary:
+
+  - `locale_fmt` (bool): Enable locale-based number formatting (default: False)
+  - `dropdown_select_threshold` (int): Maximum unique values for dropdown filters (default: 9)
+  - `table_id` (str): HTML ID for the table element (default: "pd_datatab")
+  - `unique_id` (bool): Generate unique UUID-based table ID (default: False)
+  - `default_table_class` (str): CSS classes for table styling (default: "display compact hover order-column")
+  - `load_column_control` (bool): Enable DataTables Column Control extension (default: True)
+  - `display_logo` (bool): Display DataTables logo (default: False)
+
 
 **Returns:**
+- File path (str) if `to_file` is specified
 - HTML string if `to_file=None`
-- File object if `to_file` is specified
+- None on error
+
+**Notes:**
+- The function now supports both pandas and polars DataFrames
+- Direct passing of `load_column_control` and `display_logo` as keyword arguments is deprecated; use the `render_opts` dictionary instead
+- When `copy_button=True`, the DataTables Buttons extension is automatically configured
 
 ### render_inline
 
