@@ -74,7 +74,7 @@ df2t.render(
     startfile: bool = True,
     precision: int = 2,
     num_html: Optional[List[str]] = None,
-    copy_button: bool = False,
+    buttons: Optional[List[str]] = None,
     render_opts: Optional[dict] = None,
     js_opts: Optional[dict] = None,
     templ_path: str = TEMPLATE_PATH,
@@ -88,7 +88,7 @@ df2t.render(
 - `startfile`: If True, automatically opens the generated HTML file in default browser (default: True)
 - `precision`: Number of decimal places for floating-point numbers (default: 2)
 - `num_html`: List of numeric column names to render with color-coded HTML formatting (negative values in red) (default: None)
-- `copy_button`: If True, adds a copy button to the table toolbar (default: False)
+- `buttons`:  List of additional buttons to the table toolbar (currently only **`copy`** is possible)
 - `render_opts`: Dictionary of [additional](#additional-options)  rendering configuration options (default: None)
 - `js_opts`: Dictionary of [DataTables configuration options](https://datatables.net/reference/option/) to customize table behavior (e.g., pagination, scrolling, layout, language) (default: None)
 - `templ_path`: Path to custom HTML template (uses default if not specified)
