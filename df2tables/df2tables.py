@@ -253,7 +253,7 @@ def render(
     startfile=True,
     precision=2,
     num_html=None,
-    copy_button=False,
+    buttons=False,
     render_opts=None,
     js_opts=None,
     templ_path=TEMPLATE_PATH,
@@ -358,9 +358,11 @@ def render(
     else:
         js_opts = {}
 
-    if copy_button:
+    if buttons:
+        assert isinstance(buttons, list)
         template_vars["buttons"] = BUTTONS_URLS
-        button_loc = {"topEnd": [{"buttons": ["copy"]}, "pageLength"]}
+        if 'copy' in buttons:
+            button_loc = {"topEnd": [{"buttons": ["copy"]}, "pageLength"]}
 
         if "layout" in js_opts:
             js_opts["layout"].update(button_loc)
@@ -573,7 +575,7 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         to_file=to_file,
         precision=3,
         num_html=["measurement", "value"], #"revenue", 
-        copy_button=1,
+        buttons=['copy'],
         render_opts={
             "locale_fmt": False,
             "unique_id": 1,
