@@ -25,8 +25,15 @@ PAGE_TEMPLATE = """
     <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
 
     <!-- DataTables ColumnControl Extension -->
-    <link href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <link href="https://cdn.datatables.net/columncontrol/1.1.1/css/columnControl.dataTables.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/columncontrol/1.1.1/js/dataTables.columnControl.min.js"></script>
+
+    <!-- DataTables Buttons Extension -->
+    <link href="https://cdn.datatables.net/buttons/3.2.5/css/buttons.dataTables.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/buttons/3.2.5/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.html5.min.js"></script>
+
+
 
     <style>
         body {
@@ -97,8 +104,7 @@ PAGE_TEMPLATE = """
                     <li><strong>CSS Class:</strong> <code>display</code> - Applies stripe, hover, order-column, and row-border styles 
                     (<a href="https://datatables.net/examples/styling/display.html" target="_blank">learn more</a>)</li>
                     <li><strong>Wrapper Width:</strong> <code>fit-content</code> - Table adapts to content width</li>
-                    <li><strong>Column Control:</strong> Enabled - Users can show/hide columns dynamically</li>
-                    <li><strong>Pagination:</strong> Default (10 rows per page)</li>
+                    <li><strong>Copy</strong> button - copy table data to clipboard</li>
                 </ul>
             </div>
             <div class="fit-content-wrapper">
@@ -248,12 +254,13 @@ def display_tables():
     table1_html = df2tables.render_inline(
         sample_df.copy(),
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
-        load_column_control=True,
+        buttons=['copy']
     )
 
     # Table 2: Compact styling with custom layout and numeric formatting
     cfg2 = {
         'caption': 'Example of layout control - Custom options passed to table',
+         "pageLength": 25,
         "layout": {
             "topStart": "info",
             "top1Start": 'pageLength',
@@ -265,7 +272,6 @@ def display_tables():
         precision=4,
         table_attrs={"id": uuid.uuid4().hex, "class": "display compact hover"},
         num_html=["percentage", "change"],
-        load_column_control=True, 
         js_opts=cfg2
     )
 
@@ -283,7 +289,7 @@ def display_tables():
     table3_html = df2tables.render_inline(
         sample_df.copy(),
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
-        load_column_control=False,  
+        render_opts= {'load_column_control' : False },  
         js_opts=cfg3
     )
 
@@ -292,7 +298,7 @@ def display_tables():
         sample_df.copy(),
         num_html=["percentage", "change"],
         table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
-        load_column_control=False,
+        render_opts = {'load_column_control' : False },
     )
 
     return render_template_string(
