@@ -52,8 +52,11 @@ pip install df2tables
 ### Sample DataFrame
 
 ```python
-#render sample DataFrame
-html_string = df2t.render_sample_df(to_file="sample_table.html")
+import df2tables as dft
+
+df = dft.get_sample_df()
+
+dft.render(df, to_file='df.html')
 ```
 ### Rendering in notebook
 ```python
