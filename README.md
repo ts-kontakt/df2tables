@@ -23,7 +23,6 @@ render_inline(df, **kwargs)
 - **Web Framework Ready**: Specifically designed for easy embedding in Flask, Django, FastAPI, and other web frameworks
 - Browse **large datasets** using filters and sorting 
 - Works **independently of Jupyter**  or live server (though [notebook](#rendering-in-notebook) rendering  is supported) 
-- Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
 - **Customization**: [Configuring DataTables from Python](#customization-configuring-datatables-from-python) *(new)*
 
 ## Screenshots
@@ -62,7 +61,15 @@ from df2tables import  render_nb
 
 render_nb(df) #show interactive table in jupyter notebook
 ```
-*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and marimo*
+In practice, it is most convenient to create own shortcut for the render function with preferred settings eg.:
+```python
+from functools import partial
+show = partialrender_nb, precision=3, buttons=['copy'])
+
+show(mydf)
+```
+
+*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and Marimo*
 
 ## Main Functions
 ### render
