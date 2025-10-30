@@ -202,6 +202,8 @@ if __name__ == "__main__":
 
 You can now customize DataTables behavior directly from Python by passing configuration options through the new `js_opts` parameter. This allows you to control [DataTables options](https://datatables.net/reference/option/) and [features](https://datatables.net/reference/feature/) without modifying the HTML template. 
 
+> Note: These options are **DataTables-specific** and are applied by defining options in the underlying `new DataTable()` constructor under the hood.
+
 ### Basic Usage
 
 Simply pass a dictionary of DataTables options to the `js_opts` parameter in the `render` or `render_inline` function.
