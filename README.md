@@ -67,7 +67,7 @@ render_nb(df) #show interactive table in jupyter notebook
 In practice, it is most convenient to create own shortcut for the render function with preferred settings eg.:
 ```python
 from functools import partial
-show = partialrender_nb, precision=3, buttons=['copy'])
+show = partial(render_nb, precision=3, buttons=['copy'])
 
 show(mydf)
 ```
@@ -306,7 +306,7 @@ The module includes error handling for:
 - **Column compatibility**: Automatically converts problematic column types to string representation
 
 ### Offline Usage
-*Note: "Offline" viewing assumes internet connectivity for CDN resources (DataTables, jQuery, PureCSS, [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/)). For truly offline usage, modify the template to reference local copies of these libraries instead of CDN links.*
+*Note: "Offline" viewing assumes internet connectivity for CDN resources (DataTables, jQuery, PureCSS etc). For truly offline usage, modify the template to reference local copies of these libraries instead of CDN links.*
 
 ## Appendix: Template Customization
 
