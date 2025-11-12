@@ -23,6 +23,7 @@ render_inline(df, **kwargs)
 - **Web Framework Ready**: Specifically designed for easy embedding in Flask, Django, FastAPI, and other web frameworks
 - Browse **large datasets** using filters and sorting 
 - Works **independently of Jupyter**  or live server (though [notebook](#rendering-in-notebook) rendering  is supported) 
+- Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
 - **Customization**: [Configuring DataTables from Python](#customization-configuring-datatables-from-python) *(new)*
 
 ## Screenshots
@@ -52,11 +53,8 @@ pip install df2tables
 ### Sample DataFrame
 
 ```python
-import df2tables as dft
-
-df = dft.get_sample_df()
-
-dft.render(df, to_file='df.html')
+#render sample DataFrame
+html_string = df2t.render_sample_df(to_file="sample_table.html")
 ```
 ### Rendering in notebook
 ```python
@@ -64,26 +62,19 @@ from df2tables import  render_nb
 
 render_nb(df) #show interactive table in jupyter notebook
 ```
-In practice, it is most convenient to create own shortcut for the render function with preferred settings eg.:
-```python
-from functools import partial
-show = partial(render_nb, precision=3, buttons=['copy'])
-
-show(mydf)
-```
-
-*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and Marimo*
-
+*Note: Notebook rendering is currently supported in Jupyter,  VS Code notebooks and marimo*
 ## Main Functions
+
 ### render
+
 ```python
 df2t.render(
-    df: pd.DataFrame,
+    df: pd.DataFrame | pl.DataFrame,
     to_file: str = "datatable.html",
     title: str = "",
     startfile: bool = True,
     precision: int = 2,
-    num_html: Optional[List[str]] = None,
+    format_negatives: Union[bool, List[str], Tuple[str], Set[str]] = False,
     buttons: Optional[List[str]] = None,
     render_opts: Optional[dict] = None,
     js_opts: Optional[dict] = None,
@@ -91,44 +82,54 @@ df2t.render(
     **kwargs
 ) -> Union[str, None]
 ```
+
 **Parameters:**
+
 - `df`: Input pandas or polars DataFrame
-- `to_file`: Output HTML file path (default: "datatable.html"). If None, returns HTML string instead of writing file
+- `to_file`: Output HTML file path (default: "datatable.html"). If `None`, returns HTML string instead of writing file
 - `title`: Title for the HTML table (default: "")
-- `startfile`: If True, automatically opens the generated HTML file in default browser (default: True)
-- `precision`: Number of decimal places for floating-point numbers (default: 2)
-- `num_html`: List of numeric column names to render with color-coded HTML formatting (negative values in red) (default: None)
-- `buttons`:  List of additional buttons to the table toolbar (currently only **`copy`** is possible)
-- `render_opts`: Dictionary of [additional](#additional-options)  rendering configuration options (default: None)
+- `startfile`: If `True`, automatically opens the generated HTML file in default browser (default: True)
+- `precision`: Number of decimal places for floating-point numbers. Must be a non-negative integer (default: 2)
+- `format_negatives`: Configure negative number formatting with color-coded HTML (negative values in red):
+  - `False`: No special formatting (default)
+  - `True`: Auto-detect and format all numeric columns containing negative values
+  - `List/Tuple/Set[str]`: Format only specified column names (spaces in column names should be replaced with underscores)
+- `buttons`: List of DataTables button types to add to the toolbar (e.g., `['copy', 'csv', 'excel', 'pdf']`). Requires DataTables Buttons extension (default: None)
+- `render_opts`: Dictionary of additional rendering configuration options (see below for available options)
 - `js_opts`: Dictionary of [DataTables configuration options](https://datatables.net/reference/option/) to customize table behavior (e.g., pagination, scrolling, layout, language) (default: None)
 - `templ_path`: Path to custom HTML template (uses default if not specified)
-- `**kwargs`: 
+- `**kwargs`: **Deprecated** - Passing `load_column_control` and `display_logo` directly is deprecated and will be removed in a future version. Use `render_opts` dictionary instead
 
+**Available `render_opts` options:**
 
-
-### Additional options
-
-Possible additional options can be set in `render_opts` dictionary:
-
-  - `locale_fmt` (bool): Enable locale-based numbers and dates formatting (default: False)
-  - `dropdown_select_threshold` (int): Maximum unique values for dropdown filters (default: 9)
-  - `table_id` (str): HTML ID for the table element (default: "pd_datatab")
-  - `unique_id` (bool): Generate unique UUID-based table ID (default: False)
-  - `default_table_class` (str): CSS classes for table styling (default: "display compact hover order-column")
-  - `load_column_control` (bool): Enable DataTables Column Control extension (default: True)
-  - `display_logo` (bool): Display DataTables logo (default: False)
-
+- `locale_fmt` (bool): Enable locale-based number formatting (default: False)
+- `reorder` (bool): Enable column reordering functionality. Requires `load_column_control=True` (default: False)
+- `dropdown_select_threshold` (int): Maximum unique values for dropdown filters. Columns with more unique values will use text input instead (default: 9)
+- `table_id` (str): HTML ID for the table element (default: "pd_datatab")
+- `unique_id` (bool): Generate unique UUID-based table ID for multiple tables on one page (default: False)
+- `default_table_class` (str): CSS classes for table styling (default: "display compact hover order-column")
+- `add_expand_btn` (bool): Add expand/collapse button for row details (default: True)
+- `display_logo` (bool): Display DataTables logo (default: False)
 
 **Returns:**
-- File path (str) if `to_file` is specified
+
+- File path (str) if `to_file` is specified and file is successfully written
 - HTML string if `to_file=None`
-- None on error
+- `None` on error (file write failure or invalid input)
+
+**Raises:**
+
+- `ValueError`: If `precision` is not a non-negative integer, DataFrame is empty/unsupported type, or DataFrame cannot be processed
+- `UserWarning`: For unknown keyword arguments passed to the function
+
+
+---
 
 ### render_inline
 
 ```python
 df2t.render_inline(
-    df: pd.DataFrame, 
+    df: pd.DataFrame | pl.DataFrame,
     table_attrs: Dict = None,
     **kwargs
 ) -> str
@@ -143,12 +144,13 @@ This function is designed for integration with web applications and has the foll
 - Useful for pages with multiple tables, as you can assign unique IDs via the `table_attrs` dictionary (e.g., `{'id': 'my-unique-table'}`)
 - **Important**: This function does not include jQuery or DataTables library dependencies. You must include them manually in your host HTML page for the table to function correctly
 
-Some key arguments are not applicable, such as `title` or `display_logo`, because the returned HTML contains only the table and JavaScript.
+The **`table_attrs`** argument accepts a dictionary of HTML table attributes, such as an ID or CSS class. This is especially useful for multiple tables on a single page (each must have a different ID).
 
-The **new** additional **`table_attrs`** argument accepts a dictionary of HTML table attributes, such as an ID or CSS class. This is especially useful for multiple tables on a single page (each must have a different ID).
+**Note:** Some arguments from `render()` are not applicable here, such as `title`, `display_logo`, or `startfile`, because the returned HTML contains only the table element and its initialization script.
+
+**Example:**
 
 See an example of multiple tables with different configuration options placed in separate tabs (jQuery UI Tabs): [flask_multiple_tables_tabs.py](https://github.com/ts-kontakt/df2tables/blob/main/flask_multiple_tables_tabs.py)
-
 
 ### Minimal Flask Example
 Here's a complete, minimal **working** Flask application that demonstrates how to properly embed a DataTable with all required dependencies:
@@ -173,17 +175,15 @@ def home():
         <!DOCTYPE html>
         <html>
         <head>
+        <style>
+        body {
+            font-size: 0.875rem;line-height: 1.4;font-family: "Helvetica Neue",Arial,sans-serif;
+            }
+        </style>
             <title>Flask Data Dashboard</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            
-            <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-            <link href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css" rel="stylesheet">
-            <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script><!--[column_control-->
-            <link href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css" rel="stylesheet">
-            <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script><!--column_control]-->
-
-            <!-- Optional: PureCSS for styling -->
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css">
+        <link href="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.css" rel="stylesheet" integrity="sha384-wSlKDmHlZXDO0o5ZHsloB4i8j/JsaA8Jx0uiAW7ECdNdWBoJZXeLnYbh7yCB09Os" crossorigin="anonymous">
+        <script src="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.js" integrity="sha384-Db6ik1fBYSPYBHoWXu+DJTvPGs+KGoiEMJC36Hp2uJfaHwUWOCZvWxaCnc/4rEBs" crossorigin="anonymous"></script>
         </head>
         <body style="background-color: #f4f4f4;">
             <div style="background-color: #fff; padding: 20px; margin: 20px;">
@@ -204,8 +204,6 @@ if __name__ == "__main__":
 ## Customization: Configuring DataTables from Python
 
 You can now customize DataTables behavior directly from Python by passing configuration options through the new `js_opts` parameter. This allows you to control [DataTables options](https://datatables.net/reference/option/) and [features](https://datatables.net/reference/feature/) without modifying the HTML template. 
-
-> Note: These options are **DataTables-specific** and are applied by defining options in the underlying `new DataTable()` constructor under the hood.
 
 ### Basic Usage
 
@@ -247,8 +245,6 @@ scroll_cfg = {
 }
 df2t.render(df, js_opts=scroll_cfg, to_file="scrolling_table.html")
 ```
-
-
 
 ### Error Handling
 
@@ -306,7 +302,7 @@ The module includes error handling for:
 - **Column compatibility**: Automatically converts problematic column types to string representation
 
 ### Offline Usage
-*Note: "Offline" viewing assumes internet connectivity for CDN resources (DataTables, jQuery, PureCSS etc). For truly offline usage, modify the template to reference local copies of these libraries instead of CDN links.*
+*Note: "Offline" viewing assumes internet connectivity for CDN resources (DataTables, jQuery, PureCSS, [DataTables Column Control extension](https://datatables.net/extensions/columncontrol/)). For truly offline usage, modify the template to reference local copies of these libraries instead of CDN links.*
 
 ## Appendix: Template Customization
 
