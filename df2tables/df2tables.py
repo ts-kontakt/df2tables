@@ -4,6 +4,7 @@
 df2tables: Convert pandas/polars DataFrames to interactive HTML DataTables.
 This module provides functionality to render DataFrames as interactive HTML tables
 using the DataTables JavaScript library, with support for filtering, sorting, and searching.
+
 """
 
 import json
@@ -40,15 +41,6 @@ __all__ = [
     "load_datatables",
     "render_nb",
 ]
-BUTT_VER = "3.2.5"
-BUTTONS_URLS = f"""
-<link href="https://cdn.datatables.net/buttons/{BUTT_VER}/css/buttons.dataTables.min.css" 
-    rel="stylesheet">
-<script src="https://cdn.datatables.net/buttons/{BUTT_VER}/js/dataTables.buttons.min.js">
-</script>
-<script src="https://cdn.datatables.net/buttons/{BUTT_VER}/js/buttons.html5.min.js">
-</script>
-"""
 
 
 def html_tag(tag, content="", attrs=None, self_closing=False):
@@ -133,7 +125,10 @@ def _prepare_dataframe(df, precision):
     # Round numeric columns to specified precision
     float_cols = df_copy.select_dtypes(include="number").columns
     if len(float_cols) > 0:
-        df_copy[float_cols] = df_copy[float_cols].round(precision)
+        try:
+            df_copy[float_cols] = df_copy[float_cols].round(precision)
+        except ValueError:
+            print("!", sys.exc_info())
 
     # Convert unhashable types (lists, dicts) to string representation
     for col in df_copy.columns:
@@ -145,7 +140,7 @@ def _prepare_dataframe(df, precision):
     return df_copy
 
 
-def _generate_column_defs(df, num_html, load_column_control, dropdown_select_threshold):
+def _generate_column_defs(df, load_column_control, dropdown_select_threshold):
     """
     Generates DataTables column definitions with appropriate search controls.
 
@@ -183,22 +178,16 @@ def _generate_column_defs(df, num_html, load_column_control, dropdown_select_thr
             col_def["searchable"] = True
             if load_column_control:
                 col_def["columnControl"] = ["order", ["title", "search"]]
-
-        # Mark numeric HTML columns for special rendering
-        if col in num_html:
-            col_def["render"] = RENDER_NUM_FUNC
-            col_def["type"] = "num-html"
-
         columns.append(col_def)
     return columns
 
 
-def process_pandas(df, precision, num_html, load_column_control, dropdown_select_threshold):
+def process_pandas(df, precision, load_column_control, dropdown_select_threshold):
     """
     Complete processing pipeline for pandas DataFrames.
     """
     df_prepared = _prepare_dataframe(df, precision)
-    columns_defs = _generate_column_defs(df_prepared, num_html or [], load_column_control,
+    columns_defs = _generate_column_defs(df_prepared, load_column_control,
                                          dropdown_select_threshold)
     data_arrays = df_prepared.values.tolist()
     search_columns = list(df_prepared.select_dtypes(include=["object", "string"]).columns)
@@ -236,14 +225,27 @@ DEPRECATED_ARGS = {
 }
 
 DEFAULT_RENDER_OPTS = {
-    "locale_fmt": False,  
+    "locale_fmt": False,
+    "reorder": False,
     "dropdown_select_threshold": 9,  # max unique values for dropdown filters
     "table_id": "pd_datatab",
     "unique_id": False,
     "default_table_class": "display compact hover order-column",
     "load_column_control": True,
+    "add_expand_btn": True,
     "display_logo": False,
 }
+
+
+def get_cols_with_neg(df):
+    col_indexes = []
+    for i, col in enumerate(df.columns):
+        try:
+            if (df[col] < 0).any():
+                col_indexes.append(i)
+        except (TypeError, NotImplementedError):
+            pass
+    return col_indexes
 
 
 def render(
@@ -252,7 +254,7 @@ def render(
     title="",
     startfile=True,
     precision=2,
-    num_html=None,
+    format_negatives=False,
     buttons=False,
     render_opts=None,
     js_opts=None,
@@ -297,14 +299,11 @@ def render(
     if not isinstance(precision, int) or precision < 0:
         raise ValueError(f"precision must be an integer, got: {type(precision).__name__}")
 
-    if num_html and not isinstance(num_html, list):
-        raise ValueError(f"num_html must be a list, got: {type(num_html).__name__}")
-
     # Determine DataFrame type and process accordingly
     mod_name = type(df).__module__
     data_arrays, columns_defs, search_columns = None, None, None
     if "pandas" in mod_name:
-        data_arrays, columns_defs, search_columns = process_pandas(df, precision, num_html,
+        data_arrays, columns_defs, search_columns = process_pandas(df, precision,
                                                                    load_column_control,
                                                                    dropdown_select_threshold)
     elif "polars" in mod_name:
@@ -313,13 +312,34 @@ def render(
         except ImportError:
             import tablepl
         data_arrays, columns_defs, search_columns = tablepl.process_pl(
-            df, precision, num_html, load_column_control, dropdown_select_threshold)
+            df, precision, load_column_control, dropdown_select_threshold)
     else:
         raise ValueError(f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
                          "Expected pandas or polars DataFrame.")
 
     if not data_arrays:
         raise ValueError("DataFrame is empty or could not be processed")
+
+    if final_opts.get("reorder") and final_opts.get("load_column_control"):
+        for i, _ in enumerate(columns_defs):
+            columns_defs[i]["columnControl"].append("reorder")
+
+    if "num_html" in kwargs:
+        print("'num_html' was renamed into 'format_negatives'")
+        format_negatives = kwargs["num_html"]
+
+    if format_negatives is False:
+        pass
+    elif format_negatives is True:
+        cols_with_neg = get_cols_with_neg(df)
+        for idx in cols_with_neg:
+            columns_defs[idx]["render"] = RENDER_NUM_FUNC
+            columns_defs[idx]["type"] = "num-html"
+    elif isinstance(format_negatives, (list, tuple, set)):
+        for idx, _ in enumerate(columns_defs):
+            if columns_defs[idx]["title"].replace(' ', '_') in format_negatives:
+                columns_defs[idx]["render"] = RENDER_NUM_FUNC
+                columns_defs[idx]["type"] = "num-html"
 
     # Prepare JSON data with special handling for JS function references
     columns_json = json.dumps(columns_defs, separators=(",", ":"),
@@ -332,11 +352,15 @@ def render(
         "tab_columns": columns_json,
         "search_columns": json.dumps(search_columns, separators=(",", ":")),
     }
+
     if precision != 2:
         template_vars["precision"] = json.dumps(int(precision))
-        
+
     if final_opts.pop("locale_fmt", None):
         template_vars["locale_fmt"] = json.dumps(True)
+
+    if final_opts.get("add_expand_btn") is False:
+        template_vars["add_expand_btn"] = json.dumps(False)
 
     if final_opts.pop("unique_id", None):
         unique_id = f'"id_{uuid.uuid4().hex}"'  # use uuid for all instances
@@ -360,9 +384,13 @@ def render(
 
     if buttons:
         assert isinstance(buttons, list)
-        template_vars["buttons"] = BUTTONS_URLS
-        if 'copy' in buttons:
-            button_loc = {"topEnd": [{"buttons": ["copy"]}, "pageLength"]}
+        # template_vars["buttons"] = BUTTONS_URLS
+        butt_obj = {"buttons": []}
+        for button in buttons:
+            butt_obj["buttons"].append(button)
+
+        # button_loc = {"top2Start": [butt_obj], "topEnd": [[butt_obj],"pageLength"]}
+        button_loc = {"topStart": ["pageLength", [butt_obj]]}
 
         if "layout" in js_opts:
             js_opts["layout"].update(button_loc)
@@ -392,7 +420,7 @@ def render(
         return None
 
 
-def render_inline(df, table_attrs=None, **kwargs):
+def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
     """
     Renders a DataFrame as inline HTML for embedding in existing pages.
 
@@ -431,6 +459,9 @@ def render_inline(df, table_attrs=None, **kwargs):
     html = comnt.render(html, {"table_id": f'"{attrs["id"]}"'})
 
     # Extract minimal content needed for embedding
+    if add_scripts:
+        base_table = comnt.get_tag_content("scripts", html) + base_table
+
     min_content = base_table + comnt.get_tag_content("min_content", html)
     return min_content
 
@@ -526,19 +557,20 @@ def load_datatables():
     print("load_datatables() is not needed since version: 0.1.8")
 
 
-def render_nb(df, iframe=True, **kwargs):
+def render_nb(df, iframe=True, height=500, **kwargs):
     """
     Render a DataFrame as interactive HTML within a notebook environment.
     """
+    if 'render_opts' in kwargs:
+        kwargs['render_opts'].update({"unique_id": True, "display_logo": False})
     html_content = render(
         df,
         to_file=None,
-        render_opts={"unique_id": True, 'display_logo': False},
         **kwargs,
     )
     html_content = html_content.replace('"', "&quot;")
     # html_content = escape(html_content, quote=True)
-    iframe_content = f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:450px;border:none;"></iframe>'
+    iframe_content = f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:{height}px;border:none;"></iframe>'
 
     try:
         import IPython.display as disp
@@ -560,12 +592,14 @@ def render_nb(df, iframe=True, **kwargs):
     return None
 
 
+show = render_nb
+
+
 def render_sample_df(df_type="pandas", to_file="df_table.html"):
     """
     Creates and renders a sample DataFrame for demonstration.
     """
     df = get_sample_df(df_type)
-
     # Default to home directory if no path separator provided
     if os.sep not in to_file:
         to_file = str(Path.home() / to_file)
@@ -573,17 +607,21 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
     return render(
         df,
         to_file=to_file,
+        title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
         precision=3,
-        num_html=["measurement", "value"], #"revenue", 
-        buttons=['copy'],
+        num_html=["measurement"],  # , "value"],  #"revenue",
+        buttons=["colvis", "copy", "excel"],
         render_opts={
             "locale_fmt": False,
             "unique_id": 1,
-            "title": f"Example <b>{df_type.capitalize()}</b> DataFrame",
+            "add_expand_btn": 1,
+            "reorder": 1,
             "load_column_control": 1,
             "dropdown_select_threshold": 12,
         },
-        js_opts={"_unique_id": True},
+        js_opts={"language": {
+            "decimal": "#"
+        }},
     )
 
 

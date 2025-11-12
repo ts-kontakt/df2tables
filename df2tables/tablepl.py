@@ -26,16 +26,11 @@ def _prepare_dataframe_pl(df, precision):
     return df_copy
 
 
-def _generate_column_defs_pl(
-    df, num_html_cols=None, load_column_control=True, dropdown_select_threshold=9
-):
+def _generate_column_defs_pl(df, load_column_control=True, dropdown_select_threshold=9):
     """
     Generates the column definitions list for DataTables from a Polars
     df.
     """
-    if num_html_cols is None:
-        num_html_cols = []
-
     columns = []
     for col_name in df.columns:
         try:
@@ -57,10 +52,6 @@ def _generate_column_defs_pl(
 
         col_def["orderable"] = True
 
-        if col_name in num_html_cols:
-            col_def["render"] = RENDER_NUM_FUNC
-            col_def["type"] = "num-html"
-
         columns.append(col_def)
 
     return columns
@@ -78,15 +69,13 @@ def _get_search_cols(df):
 def process_pl(
     df,
     precision=2,
-    num_html_cols=None,
     load_column_control=True,
     dropdown_select_threshold=9,
 ):
     df_prepared = _prepare_dataframe_pl(df, precision)
     data_arrays = _get_data_arrays(df_prepared)
-    columns_defs = _generate_column_defs_pl(
-        df_prepared, num_html_cols, load_column_control, dropdown_select_threshold
-    )
+    columns_defs = _generate_column_defs_pl(df_prepared, load_column_control,
+                                            dropdown_select_threshold)
     search_columns = _get_search_cols(df_prepared)
     return data_arrays, columns_defs, search_columns
 

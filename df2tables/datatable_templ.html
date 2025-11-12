@@ -1,18 +1,10 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <!--[head-->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DataFrame</title>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script><!--[column_control-->
-    <link href="https://cdn.datatables.net/columncontrol/1.1.1/css/columnControl.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/columncontrol/1.1.1/js/dataTables.columnControl.min.js"></script><!--column_control]-->
-    <!--[buttons-->
-    <!--buttons]-->
-
     <style>
         body {
             font-size: 0.875rem;
@@ -27,8 +19,9 @@
         }
 
         :root {
-            
+
             --table_border: 1px solid rgba(34, 36, 38, .1);
+
         }
 
         .dataTables_wrapper {
@@ -41,13 +34,16 @@
 
         table.dataTable {
             border: var(--table_border);
-
-
-
+            margin: 0 0 0 0;
         }
 
+
         table.dataTable thead td {
-            border-left: var(--table_border);
+            /*border-left: var(--table_border);*/
+            border-style: solid;
+            border-color: #e9e9e9;
+            border-width: 0 1px 0 0;
+            padding: 0px 0px 0px 0.4rem !important;
         }
 
         table.dataTable td {
@@ -75,14 +71,16 @@
 
         }
 
+        div.dt-container div.dt-layout-row {
+            margin: 0.5em 0 0 0;
+
+        }
+
         custom.select {
             color: black;
             max-width: 15.5em;
             margin: 1px;
         }
-
-
-
 
         .dtlogo {
             opacity: 0.5;
@@ -115,6 +113,7 @@
             padding: 6px 10px; */
             border-radius: 6px;
             transition: all 0.2s ease-in-out;
+
         }
 
         /* Highlight only when user typed something */
@@ -124,27 +123,27 @@
             border-color: #66b2ff !important;
             font-weight: bold;
         }
-        
+
         input[type="search"]::-webkit-search-cancel-button {
             -webkit-appearance: auto;
-            appearance: auto ;
+            appearance: auto;
             cursor: pointer;
         }
-        
+
 
         div.dtcc-title {
             font-weight: 600;
         }
 
         table.dataTable span.dtcc span.dtcc-button-icon {
-            color:   #0A2540;
+            color: #0A2540;
             /* #0A2540  #00457C #0D47A1  #0A3D62 #052C65 */
             --dt-row-selected-stripe-alpha: 0.99
         }
 
 
 
-        .clear-btn {
+        .custom_btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -154,234 +153,313 @@
             border: 1px solid #ccc;
             background: #f7f7f7;
             border-radius: 3px;
+            /* margin:0 1em 0 0; */
         }
 
-        .clear-btn .icon {
+        .custom_btn .icon {
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .clear-btn:hover {
+        .custom_btn:hover {
             background: #e9e9e9;
         }
-    </style><!--head]-->
+
+        button.dt-button {
+            padding: .2rem 0.5rem !important;
+        }
+
+        div.dt-buttons {
+            margin-right: 1rem;
+
+        }
+
+    </style><!--[scripts-->
+    <link href="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.css" rel="stylesheet" integrity="sha384-wSlKDmHlZXDO0o5ZHsloB4i8j/JsaA8Jx0uiAW7ECdNdWBoJZXeLnYbh7yCB09Os" crossorigin="anonymous">
+    <script src="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.js" integrity="sha384-Db6ik1fBYSPYBHoWXu+DJTvPGs+KGoiEMJC36Hp2uJfaHwUWOCZvWxaCnc/4rEBs" crossorigin="anonymous"></script>
+    <!--scripts]-->
+    <!--head]-->
 </head>
+
 <body>
     <div class="pure-g">
-        <div class="pure-u-1 pure-u-md-1-1">
-            <div id="tabcnt" style="width: fit-content; margin-left: 1em">
+        <div class="pure-u-1 pure-u-md-1-1" style="padding:0px;">
+            <div id="loading" style="display:none;">
+                Loading…
+            </div>
+            <div id="tabcnt" style="width: fit-content; margin: 0 0 0 0.5rem;">
                 <p><!--[title-->
-                 Example dataframe <!--title]--></p><!--[table_markup-->
+                    <!--title]-->
+                </p><!--[table_markup-->
                 <table id="pd_datatab" style="width:auto;" class="display compact hover order-column"></table><!--table_markup]-->
             </div>
-        </div><!--[min_content-->
-        <script type="text/javascript">
-   /* global DataTable, $, jQuery  */
-(function() {
-    /* https://datatables.net/extensions/columncontrol/examples/styling/alignmentHeaderOnly.html */
-    DataTable.type("num", "className", "dt-body-right");
-    DataTable.type("num-fmt", "className", "dt-body-right");
-    DataTable.type("date", "className", "dt-body-right");
-    if (DataTable.ColumnControl) {
-        const active_funnel = '<svg id="funnel_menu_a" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-icon lucide-funnel"> <rect x="-4" y="-4" width="32" height="32" fill="#0B57D0"/> <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/> </svg> ';
-        const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" id="funnel_menu_p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
-        DataTable.ColumnControl.icons["menu"] = inactive_funnel;
-        DataTable.ColumnControl.Button.prototype._checkActive = function() {
-            var curr_icon = this._dom.icon.innerHTML || "";
-            /* let is_top_menu = !this._dom.dropdownDisplay;     */
-            if (this._s.active === true || Object.values(this._s.activeList).includes(true)) {
-                this._dom.state.innerHTML = DataTable.ColumnControl.icons.tick;
-                this._dom.button.classList.add("dtcc-button_active");
-                if (curr_icon.includes("funnel_menu")) {
-                    this._dom.icon.innerHTML = active_funnel;
-                }
-            } else {
-                this._dom.state.innerHTML = "";
-                this._dom.button.classList.remove("dtcc-button_active");
-                if (curr_icon.includes("funnel_menu")) {
-                    this._dom.icon.innerHTML = inactive_funnel;
-                }
-            }
-            return this;
-        };
-    }
-    function deepMerge(target, source) {
-        for (const key in source) {
-            if (source[key] && typeof source[key] === "object" && !Array.isArray(source[key])) {
-                if (!target[key] || typeof target[key] !== "object" || Array.isArray(target[key])) {
-                    target[key] = {};
-                }
-                deepMerge(target[key], source[key]);
-            } else {
-                target[key] = source[key];
-            }
-        }
-        return target;
-    }
-    function _anyNumber(a) {
-        var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
-        if (typeof a === "string") {
-            a = a.replace(",", ".").replace(/ /g, "").match(reg);
-            a = a !== null ? parseFloat(a[0]) : Number.POSITIVE_INFINITY;
-        }
-        return a;
-    }
-    jQuery.extend(jQuery.fn.dataTableExt.oSort, {
-        "num-html-pre": function(a) {
-            var x = String(a).replace(/<[\s\S]*?>/g, "");
-            return parseFloat(_anyNumber(x));
-        },
-        "num-html-asc": function(a, b) {
-            return a < b ? -1 : a > b ? 1 : 0;
-        },
-        "num-html-desc": function(a, b) {
-            return a < b ? 1 : a > b ? -1 : 0;
-        }
-    });
-    function search_info() {
-        if (!search_columns || search_columns.length === 0) {
-            return;
-        }
-        const searchableColumns = search_columns;
-        const searchNote = $("<p>").css({
-            "margin-bottom": "0.5rem",
-            "font-size": "0.7rem",
-            color: "#667"
-        }).text("General search is enabled for: " + searchableColumns.map(col => `"${col}"`).join(", "));
-        $("#" + TABLE_ID + "_wrapper").prepend(searchNote);
-    }
-    const render_precision = /*[precision*/ 2 /*precision]*/;
-    const render_num = (data, type) => {
-        const number = DataTable.render.number(" ", ",", render_precision).display(data);
-        if (type !== "display") return number;
-        const color = data < 0 ? "red" : "black";
-        return '<span style="color:' + color + '">' + number + "</span>";
-    };
-    const tab_data = 
-    /*[tab_data*/
-    [ [ "2025-09-11T08:27:01.989794", .09, "F", -.33, -2e3, "Premium", 2222222222, -1, "Emergency" ], [ "Lorem ipsum dolor sit amet, consectetur adipiscing", -.59, "A", 1, -1, "Premium", "0", 1, "Medium priority" ], [ "<b>Integer</b> laoreet odio et.", .2, "D", -9, 2, "Budget", "1", 2, "Low priority" ], [ null, -.49, "F", 4, 3, "Budget", "0", 1, "Low priority" ], [ " class 'datetime.datetime' ", -.18, "A", 2, 4, "Standard", "1", 1, "Emergency" ], [ " NA ", -.8, "A", 3, 5, "Premium", "0", 0, "High priority" ], [ [ "C", {
-        a: 1
-    } ], -.52, "B", 1111.11, 7e4, "Budget", "0", 0, "High priority" ] ]
-    /*tab_data]*/;
-    const columns = 
-    /*[tab_columns*/
-    [ {
-        title: "col 1a",
-        searchable: true,
-        orderable: true,
-        columnControl: [ "order", [ "title", "search" ] ]
-    }, {
-        title: "col 2",
-        searchable: true,
-        orderable: true,
-        columnControl: [ "order", [ "title", "search" ] ],
-        render: render_num,
-        type: "num-html"
-    }, {
-        title: "C 3",
-        orderable: true,
-        columnControl: [ "order", [ "title", "searchList" ] ]
-    }, {
-        title: "col4",
-        searchable: true,
-        orderable: true,
-        columnControl: [ "order", [ "title", "search" ] ],
-        render: render_num,
-        type: "num-html"
-    }, {
-        title: "col5",
-        searchable: true,
-        orderable: true,
-        columnControl: [ "order", [ "title", "search" ] ],
-        render: render_num,
-        type: "num-html"
-    }, {
-        title: "col6",
-        orderable: true,
-        columnControl: [ "order", [ "title", "searchList" ] ]
-    }, {
-        title: "col7",
-        orderable: true,
-        columnControl: [ "order", [ "title", "searchList" ] ]
-    }, {
-        title: "col8",
-        orderable: true,
-        columnControl: [ "order", [ "title", "searchList" ] ]
-    }, {
-        title: "col9",
-        orderable: true,
-        columnControl: [ "order", [ "title", "searchList" ] ]
-    } ]
-    /*tab_columns]*/;
-    const search_columns = 
-    /*[search_columns*/
-    [ "col_1a", "C 3", "col6", "col7", "col9" ]
-    /*search_columns]*/;
-    const search_val = search_columns && search_columns.length > 0 ? "search" : null;
-    const custom_layout = {
-        topStart: "info",
-        top1Start: search_val,
-        topEnd: "pageLength",
-        bottomStart: null,
-        bottomEnd: null,
-        bottom: "paging"
-    };
-    const TABLE_ID = /*[table_id*/ "pd_datatab"
-    /*table_id]*/;
-    const locale_fmt = /*[locale_fmt*/ false /*locale_fmt]*/;
-    if (locale_fmt) {
-        DataTable.type("date", "render", DataTable.render.date());
-        DataTable.type("num", "render", DataTable.render.number());
-    }
-    const clearButton = '<button id="custom_clear1" class="clear-btn"><span class="icon"><svg id="custom_clear2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
-    const clearButton2 = '<button id="custom_clear1" class="clear-btn"><span class="icon">' + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' + "</span>Clear all</button>";
-    let table_opts = {
-        data: tab_data,
-        layout: custom_layout,
-        autoWidth: false,
-        columns: columns,
-        pageLength: 50,
-        responsive: true,
-        order: false,
-        processing: true,
-        language: {
-            search: "_INPUT_",
-            searchPlaceholder: "Search...",
-            sInfoFiltered: "(filtered from _MAX_ total _ENTRIES-MAX_ ) " + clearButton
-        },
-        initComplete: search_info
-    };
-    const custom_config_opts = /*[js_opts*/ {} /*js_opts]*/;
-    if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
-        deepMerge(table_opts, custom_config_opts);
-    }
-    const build_table = function() {
-        let table = $("#" + TABLE_ID).DataTable(table_opts);
-        $(document).on("click", e => {
-            console.log(e.target);
-            if (e.target.id.includes("custom_clear")) {
-                try {
-                    table.search("").columns().columnControl.searchClear().draw();
-                } catch (err) {
-                    console.log(err);
-                    table.search("").draw();
-                }
-            }
-        });
-    };
-    $(document).ready(function() {
-        build_table();
-    });
-})();
-        </script> <!--min_content]-->
-         <!--[datatables_logo-->
+        </div><!--[datatables_logo-->
         <figure class="dtlogo">
             <img src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Datatables_logo_square.png" width="20" style="display: block; margin-left: auto; margin-right: auto">
             <figcaption style="text-align: center">
                 <small style="font-size: 9px"><a target="blank" href="https://datatables.net">DataTables.net</a></small>
             </figcaption>
         </figure><!--datatables_logo]-->
-    </div>
+    </div><!--[min_content-->
+    <script type="text/javascript">
+        /* global DataTable, $, jQuery  */
+        (function() {
+            /* https://datatables.net/extensions/columncontrol/examples/styling/alignmentHeaderOnly.html */
+            DataTable.type("num", "className", "dt-body-right");
+            DataTable.type("num-fmt", "className", "dt-body-right");
+            DataTable.type("date", "className", "dt-body-right");
+            if (DataTable.ColumnControl) {
+                const active_funnel = '<svg id="funnel_menu_a" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-icon lucide-funnel"> <rect x="-4" y="-4" width="32" height="32" fill="#0B57D0"/> <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/> </svg> ';
+                const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" id="funnel_menu_p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
+                DataTable.ColumnControl.icons["menu"] = inactive_funnel;
+                DataTable.ColumnControl.Button.prototype._checkActive = function() {
+                    var curr_icon = this._dom.icon.innerHTML || "";
+                    /* let is_top_menu = !this._dom.dropdownDisplay;     */
+                    if (this._s.active === true || Object.values(this._s.activeList).includes(true)) {
+                        this._dom.state.innerHTML = DataTable.ColumnControl.icons.tick;
+                        this._dom.button.classList.add("dtcc-button_active");
+                        if (curr_icon.includes("funnel_menu")) {
+                            this._dom.icon.innerHTML = active_funnel;
+                        }
+                    } else {
+                        this._dom.state.innerHTML = "";
+                        this._dom.button.classList.remove("dtcc-button_active");
+                        if (curr_icon.includes("funnel_menu")) {
+                            this._dom.icon.innerHTML = inactive_funnel;
+                        }
+                    }
+                    return this;
+                };
+            }
+
+            function deepMerge(target, source) {
+                for (const key in source) {
+                    if (source[key] && typeof source[key] === "object" && !Array.isArray(source[key])) {
+                        if (!target[key] || typeof target[key] !== "object" || Array.isArray(target[key])) {
+                            target[key] = {};
+                        }
+                        deepMerge(target[key], source[key]);
+                    } else {
+                        target[key] = source[key];
+                    }
+                }
+                return target;
+            }
+
+            function _anyNumber(a) {
+                var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
+                if (typeof a === "string") {
+                    a = a.replace(",", ".").replace(/ /g, "").match(reg);
+                    a = a !== null ? parseFloat(a[0]) : Number.POSITIVE_INFINITY;
+                }
+                return a;
+            }
+            jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+                "num-html-pre": function(a) {
+                    var x = String(a).replace(/<[\s\S]*?>/g, "");
+                    return parseFloat(_anyNumber(x));
+                },
+                "num-html-asc": function(a, b) {
+                    return a < b ? -1 : a > b ? 1 : 0;
+                },
+                "num-html-desc": function(a, b) {
+                    return a < b ? 1 : a > b ? -1 : 0;
+                }
+            });
+            const add_expand_btn = /*[add_expand_btn*/ true /*add_expand_btn]*/ ;
+
+            function search_info() {
+                if (search_columns || search_columns.length > 0) {
+                    const searchableColumns = search_columns;
+                    let search_msg = "[" + searchableColumns.map(col => `'${col}'`).join(", ") + "]";
+                    if (search_msg.length > 150) {
+                        search_msg = search_msg.slice(0, 150) + "...";
+                    }
+                    const searchNote = $("<span>").css({
+                        margin: "0.5rem",
+                        "font-size": "0.7rem",
+                        "font-style": "italic",
+                        display: "inline-flex",
+                        color: "#667"
+                    }).text(search_msg);
+                    $("#" + TABLE_ID + "_wrapper" + " input.dt-input").after(searchNote);
+                }
+                if (add_expand_btn) {
+                    var dn_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>';
+                    var up_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>';
+                    var expand_butt = '<button class="custom_btn" type="button" title="Show tools"><span class="icon">' + dn_icon + "</span></button>";
+                    var tools = $("<span>").css({
+                        display: "flex",
+                        right: "",
+                        "font-size": "8pt"
+                    }).html(expand_butt);
+                    $("#" + TABLE_ID + "_info").before(tools);
+                    $("div.dt-buttons").hide();
+                    $("div.dt-length").hide();
+                    tools.on("click", function(event) {
+                        event.preventDefault();
+                        $("div.dt-buttons").toggle();
+                        $("div.dt-length").toggle();
+                        var iconSpan = $(this).find(".icon");
+                        var button = $(this).find(".custom_btn");
+                        var isDown = iconSpan.html().indexOf("chevron-down") !== -1;
+                        if (isDown) {
+                            iconSpan.html(up_icon);
+                            button.attr("title", "Hide tools");
+                        } else {
+                            iconSpan.html(dn_icon);
+                            button.attr("title", "Show tools");
+                        }
+                    });
+                }
+            }
+            const render_precision = /*[precision*/ 2 /*precision]*/ ;
+            var thousands = "";
+            var decimal = ".";
+            const render_num = (data, type) => {
+                if (data === null) {
+                    return null;
+                }
+                const number = DataTable.render.number(thousands, decimal, render_precision).display(data);
+                if (type !== "display") return number;
+                const color = data < 0 ? "red" : "black";
+                return '<span style="color:' + color + '">' + number + "</span>";
+            };
+            const tab_data =
+                /*[tab_data*/
+                [
+                    ["2025-09-11T08:27:01.989794", .09, "F", -.987, -2e3, "Premium", 222222222.987, -1, "Emergency"],
+                    ["Lorem ipsum dolor sit amet, consectetur adipiscing", -.59, "A", 1, -1, "Premium", "0.123", 1, "Medium priority"],
+                    ["<b>Integer</b> laoreet odio et.", .2, "D", -9, 2, "Budget", "1", 2, "Low priority"],
+                    [null, -.49, "F", 4, 3, "Budget", "0", 1, "Low priority"],
+                    [" class 'datetime.datetime' ", -.18, "A", 2, 4, "Standard", "1", 1, "Emergency"],
+                    [" NA ", -.8, "A", 3, 5, "Premium", "0", 0, "High priority"],
+                    [
+                        ["C", {
+                            a: 1
+                        }], -.52, "B", 1111.11, 7e4, "Budget", "0", 0, "High priority"
+                    ]
+                ]
+            /*tab_data]*/
+            ;
+            const columns =
+                /*[tab_columns*/
+                [{
+                    title: "col 1a",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]]
+                }, {
+                    title: "col 2",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]],
+                    render: render_num,
+                    type: "num-html"
+                }, {
+                    title: "C 3",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col4",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]],
+                    render: render_num,
+                    type: "num-html"
+                }, {
+                    title: "col5",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]],
+                    render: render_num,
+                    type: "num-html"
+                }, {
+                    title: "col6",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col7",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col8",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col9",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }]
+            /*tab_columns]*/
+            ;
+            const search_columns =
+                /*[search_columns*/
+                ["col_1a", "C 3", "col6", "col7", "col9"]
+            /*search_columns]*/
+            ;
+            const search_val = search_columns && search_columns.length > 0 ? "search" : null;
+            const custom_layout = {
+                top1Start: "info",
+                top2Start: search_val,
+                topStart: ["pageLength", {
+                    buttons: ["colvis", "copy"]
+                }],
+                topEnd: null,
+                bottomStart: null,
+                bottomEnd: null,
+                bottom: "paging"
+            };
+            const TABLE_ID = /*[table_id*/ "pd_datatab"
+            /*table_id]*/
+            ;
+            const locale_fmt = /*[locale_fmt*/ false /*locale_fmt]*/ ;
+            if (locale_fmt) {
+                DataTable.type("date", "render", DataTable.render.date());
+                DataTable.type("num", "render", DataTable.render.number());
+            } else {
+                DataTable.type("num", "render", DataTable.render.number(thousands, decimal, render_precision));
+            }
+            const clearButton = '<button id="custom_clear1" class="custom_btn"><span class="icon"><svg id="custom_clear2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
+            let table_opts = {
+                data: tab_data,
+                layout: custom_layout,
+                autoWidth: false,
+                columns: columns,
+                pageLength: 50,
+                responsive: true,
+                order: false,
+                processing: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search in columns:",
+                    sInfoFiltered: "(filtered from _MAX_ total _ENTRIES-MAX_ ) " + clearButton
+                },
+                initComplete: search_info
+            };
+            const custom_config_opts = /*[js_opts*/ {} /*js_opts]*/ ;
+            if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
+                deepMerge(table_opts, custom_config_opts);
+            }
+            const build_table = function() {
+                let table = $("#" + TABLE_ID).DataTable(table_opts);
+                $(document).on("click", e => {
+                    if (e.target.id.includes("custom_clear")) {
+                        try {
+                            table.search("").columns().columnControl.searchClear().draw();
+                        } catch (err) {
+                            console.log(err);
+                            table.search("").draw();
+                        }
+                    }
+                });
+            };
+            $(document).ready(function() {
+                build_table();
+            });
+        })();
+    </script> <!--min_content]-->
 </body>
+
 </html>
