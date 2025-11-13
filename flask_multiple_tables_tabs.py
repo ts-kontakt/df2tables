@@ -14,27 +14,14 @@ PAGE_TEMPLATE = """
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>df2tables - Multiple Tables Demo</title>
-
+    <link href="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.css" rel="stylesheet" integrity="sha384-wSlKDmHlZXDO0o5ZHsloB4i8j/JsaA8Jx0uiAW7ECdNdWBoJZXeLnYbh7yCB09Os" crossorigin="anonymous">
+     <script src="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.js" integrity="sha384-Db6ik1fBYSPYBHoWXu+DJTvPGs+KGoiEMJC36Hp2uJfaHwUWOCZvWxaCnc/4rEBs" crossorigin="anonymous"></script>
+    
     <!-- jQuery and jQuery UI -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.min.css">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.14.1/jquery-ui.min.js"></script>
-
-    <!-- DataTables -->
-    <link href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
-
-    <!-- DataTables ColumnControl Extension -->
-    <link href="https://cdn.datatables.net/columncontrol/1.1.1/css/columnControl.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/columncontrol/1.1.1/js/dataTables.columnControl.min.js"></script>
-
-    <!-- DataTables Buttons Extension -->
-    <link href="https://cdn.datatables.net/buttons/3.2.5/css/buttons.dataTables.min.css" rel="stylesheet">
-    <script src="https://cdn.datatables.net/buttons/3.2.5/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.5/js/buttons.html5.min.js"></script>
-
-
-
+    
+    
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -102,8 +89,8 @@ PAGE_TEMPLATE = """
                 to fit its content, preventing unnecessary horizontal stretching.</p>
                 <ul class="feature-list">
                     <li><strong>CSS Class:</strong> <code>display</code> - Applies stripe, hover, order-column, and row-border styles 
-                    (<a href="https://datatables.net/examples/styling/display.html" target="_blank">learn more</a>)</li>
-                    <li><strong>Wrapper Width:</strong> <code>fit-content</code> - Table adapts to content width</li>
+                    <li><strong>Added reorder control:</strong></li>  
+                     <li><strong>Wrapper Width:</strong> <code>fit-content</code> - Table adapts to content width</li>
                     <li><strong>Copy</strong> button - copy table data to clipboard</li>
                 </ul>
             </div>
@@ -254,7 +241,8 @@ def display_tables():
     table1_html = df2tables.render_inline(
         sample_df.copy(),
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
-        buttons=['copy']
+        format_negatives=True,
+        render_opts= {'reorder': 1 }
     )
 
     # Table 2: Compact styling with custom layout and numeric formatting
@@ -263,7 +251,7 @@ def display_tables():
          "pageLength": 25,
         "layout": {
             "topStart": "info",
-            "top1Start": 'pageLength',
+            "top1End": 'pageLength',
             "topEnd": "search", 
         },
     }    
@@ -289,7 +277,7 @@ def display_tables():
     table3_html = df2tables.render_inline(
         sample_df.copy(),
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
-        render_opts= {'load_column_control' : False },  
+        render_opts= {'load_column_control' : 0 },  
         js_opts=cfg3
     )
 

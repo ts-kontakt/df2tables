@@ -60,8 +60,7 @@ def create_random_dataframe(num_rows=100):
     Integer in aliquet urna, sit amet vestibulum ante. Aliquam vitae convallis ante. Donec ut arcu et lacus condimentum maximus eget quis nunc. Sed eu ornare justo. Suspendisse ligula tellus, condimentum quis vulputate quis, ornare id enim. Pellentesque at ante mattis felis pulvinar aliquet ut at urna. Nunc a libero ac sem posuere tempor eget et nisi. Maecenas nunc purus, consequat eu faucibus at, volutpat vitae nunc. Pellentesque quis odio magna. Mauris suscipit a tortor et volutpat. Nam id ex quis ligula ultricies iaculis vitae sit amet nisl. Curabitur et mauris vel sem congue imperdiet sed sit amet orci.
     """
     words = [
-        x
-        for x in set(map(lambda x: x.strip(), lorem_ipsum_text.split(" ")))
+        x for x in set(map(lambda x: x.strip(), lorem_ipsum_text.split(" ")))
         if len(x) > 3
     ]
 
@@ -69,14 +68,14 @@ def create_random_dataframe(num_rows=100):
     colors = get_color_gradient(num_rows)
     for i in range(num_rows):
         row = [
-            random.choice(words),
+            str(generate_random_date()),
+            random.choice(priority_levels),
+            # random.choice(words),
             random.randint(100, 100000),
             random.uniform(-10, 10),
             random.uniform(-1, 1),
-            random.choice(priority_levels),
             random.choice(credit_ratings),
             repr(random.choice([True, False])),
-            str(generate_random_date()),
             colors[i],
         ]
         result.append(row)
@@ -84,7 +83,61 @@ def create_random_dataframe(num_rows=100):
     columns = [f"col{i}" for i in range(len(result[0]))]
     df = pd.DataFrame(result, columns=columns)
     return df
+    
+    
+def create_random_dataframe2(num_rows: int = 100):
+    import numpy as np
+    import pandas as pd
+    healthcare_priorities = [
+        "Low priority",
+        "Medium priority",
+        "High priority",
+        "Emergency",
+    ]
+    credit_ratings = ["Excellent", "Good", "Average", "Fair", "Poor"]
+    lorem_ipsum_words = [
+        word.strip()
+        for word in """
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis at ipsum ut ex venenatis tempor.
+        Cras fermentum metus nec massa viverra cursus. Integer pretium massa non mauris tincidunt,
+        at porttitor massa pretium.
+        """.split()
+        if len(word.strip()) > 3
+    ]
+    def get_random_date(min_year: int = 1990) -> datetime.date:
+        """Generates a random date between min_year and the current year."""
+        current_year = datetime.now().year
+        start = datetime(min_year, 1, 1)
+        end = datetime(current_year, 12, 31)
+        delta = end - start
+        random_days = random.randint(0, delta.days)
+        return (start + timedelta(days=random_days)).date()
 
+    data = []
+    for _ in range(num_rows):
+        row = [
+            str(get_random_date()),
+            random.choice(lorem_ipsum_words),
+            random.randint(100, 100_000),
+            random.uniform(-10, 10),
+            random.uniform(-1, 1),
+            random.choice(healthcare_priorities),
+            random.choice(credit_ratings),
+            str(random.choice([True, False])),
+        ]
+        data.append(row)
+
+    columns = [
+        "date",
+        "description",
+        "quantity",
+        "change",
+        "percentage",
+        "priority",
+        "rating",
+        "is_active",
+    ]
+    return pd.DataFrame(data, columns=columns)
 
 def create_complex_polars_dataframe(num_rows=100):
     """Generate complex Polars DataFrame with diverse data types and variable-length nested structures."""
@@ -98,10 +151,9 @@ def create_complex_polars_dataframe(num_rows=100):
 
     return pl.DataFrame(
         {
-            "id": range(num_rows),
             "name": [f"user_{i}" for i in range(num_rows)],
             "age": [random.randint(18, 80) for _ in range(num_rows)],
-            "score": [round(random.uniform(0, 100), 2) for _ in range(num_rows)],
+            "score": [str(round(random.uniform(0, 10000), 2)) for _ in range(num_rows)],
             "active": [random.choice([True, False]) for _ in range(num_rows)],
             "category": [random.choice(["A", "B", "C", None]) for _ in range(num_rows)],
             "timestamp": [
@@ -129,12 +181,14 @@ def render_random_table(num_rows):
         df,
         to_file=str(outfile),
         precision=3,
-        num_html=["col2", "col3"],
+        format_negatives=["col2", "col3"],
+        render_opts= {'reorder' : 1},
         title=f"Example Diverse Random Data {num_rows:,d} rows! {sys_info}".replace(
             ",", " "
         ),
     )
     print(f"Saved to: {outfile}")
+
 
 
 def render_installed_packages():
@@ -163,6 +217,9 @@ def render_installed_packages():
     print(f"Saved to: {outfile}")
 
 
+
+
+
 def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
     """Fetch and render historical daily closing prices for two tickers."""
     from datetime import date
@@ -180,7 +237,7 @@ def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
     print(f"Saved to: {outfile}")
 
 
-def render_polars_dataframe(num_rows=100):
+def render_polars_dataframe(num_rows=100, cfg=None):
     """Create and render complex Polars DataFrame to HTML table."""
     polars_df = create_complex_polars_dataframe(num_rows)
 
@@ -191,14 +248,33 @@ def render_polars_dataframe(num_rows=100):
     df2t.render(
         polars_df,
         to_file=str(outfile),
-        num_html=["value", "score"],
+        format_negatives=True,
         title=f"Complex Polars DataFrame - {num_rows:,d} rows".replace(",", " "),
+        js_opts=cfg
     )
     print(f"Saved to: {outfile}")
 
 
+config = {
+    "missing": {"missing": None}, #bad keys working 
+    "none_existent": True, #bad keys should not do harm 
+    "layout": {
+        "top2end": "pageLength",
+        "top1end": "info",
+        "topend": "search",
+    },
+    "language": {
+             "searchPlaceholder": "Search in all text columns"
+    },
+    'caption': 'Custom options passed to table',
+    "scrollCollapse": True,
+    "scrollY": '50vh',
+    "scrollX": "60rem"
+    
+}
+
 if __name__ == "__main__":
-    render_polars_dataframe(100)
+    render_polars_dataframe(100, config)
     render_installed_packages()
     render_random_table(10_000)
     render_stock_prices("SPY", "GLD")
