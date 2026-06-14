@@ -33,13 +33,8 @@ except ImportError:
 RENDER_NUM_FUNC = "#render_num"  # Placeholder for JS function injection
 
 __all__ = [
-    "TEMPLATE_PATH",
-    "render",
-    "render_inline",
-    "render_sample_df",
-    "get_sample_df",
-    "load_datatables",
-    "render_nb",
+    "TEMPLATE_PATH", "render", "render_inline", "render_sample_df", "get_sample_df",
+    "load_datatables", "render_nb",
 ]
 
 
@@ -144,40 +139,66 @@ def _generate_column_defs(df, load_column_control, dropdown_select_threshold):
     """
     Generates DataTables column definitions with appropriate search controls.
 
+    - Float columns always get a text search filter.
+    - Integer columns use the dropdown_select_threshold (dropdown if few unique values).
+    - Other non‑numeric columns also use the dropdown_select_threshold.
+
     Args:
         df: Prepared DataFrame
-        num_html: List of column names to render as numeric HTML
         load_column_control: Whether to include column control configuration
+        dropdown_select_threshold: Maximum unique values for dropdown filters
+                                   (applied to integer & non‑numeric columns only)
 
     Returns:
         list: Column definition dictionaries for DataTables
-
-    Note:
-        Columns with fewer unique values than DROPDOWN_SELECT_THRESHOLD
-        get dropdown filters, others get text search.
     """
+    import pandas as pd  # safe because the DataFrame is already pandas
+
     columns = []
     for col in df.columns:
-        # Determine number of unique values for filter type selection
-        try:
-            nunique = df[col].nunique()
-        except TypeError:
-            # If unhashable, default to text search
-            nunique = dropdown_select_threshold
-
         col_cleaned = col.replace("_", " ")
         col_def = {"title": col_cleaned, "orderable": True}
 
-        # Configure search type based on cardinality
-        if nunique < dropdown_select_threshold:
-            # Low cardinality: use dropdown filter
-            if load_column_control:
-                col_def["columnControl"] = ["order", ["title", "searchList"]]
-        else:
-            # High cardinality: use text search
+        # Determine the column's nature
+        is_float = pd.api.types.is_float_dtype(df[col])
+        is_integer = pd.api.types.is_integer_dtype(df[col])
+
+        if is_float:
+            # Float columns → always text search, never a dropdown
             col_def["searchable"] = True
             if load_column_control:
                 col_def["columnControl"] = ["order", ["title", "search"]]
+        elif is_integer:
+            # Integer columns → use the threshold
+            try:
+                nunique = df[col].nunique()
+            except TypeError:
+                nunique = dropdown_select_threshold  # fallback to text search
+
+            if nunique < dropdown_select_threshold:
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "searchList"]]
+                # no need to set searchable, columnControl defines it
+            else:
+                col_def["searchable"] = True
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "search"]]
+        else:
+            # Non‑numeric columns (strings, categories, booleans, objects, etc.)
+            # Use the threshold just like before
+            try:
+                nunique = df[col].nunique()
+            except TypeError:
+                nunique = dropdown_select_threshold
+
+            if nunique < dropdown_select_threshold:
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "searchList"]]
+            else:
+                col_def["searchable"] = True
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "search"]]
+
         columns.append(col_def)
     return columns
 
@@ -219,10 +240,7 @@ def _render_html_template(template_path, template_vars):
         return ""
 
 
-DEPRECATED_ARGS = {
-    "load_column_control",
-    "display_logo",
-}
+DEPRECATED_ARGS = {"load_column_control", "display_logo", }
 
 DEFAULT_RENDER_OPTS = {
     "locale_fmt": False,
@@ -248,19 +266,18 @@ def get_cols_with_neg(df):
     return col_indexes
 
 
-def render(
-    df,
-    to_file="datatable.html",
-    title="",
-    startfile=True,
-    precision=2,
-    format_negatives=False,
-    buttons=False,
-    render_opts=None,
-    js_opts=None,
-    templ_path=TEMPLATE_PATH,
-    **kwargs,
-):
+def render(df,
+           to_file="datatable.html",
+           title="",
+           startfile=True,
+           precision=2,
+           format_negatives=False,
+           buttons=False,
+           render_opts=None,
+           js_opts=None,
+           templ_path=TEMPLATE_PATH,
+           **kwargs,
+           ):
     """
     Renders a pandas or polars DataFrame as an interactive HTML DataTable.
 
@@ -286,7 +303,7 @@ def render(
         print(
             f"\nPassing arguments like [{arg_names}] directly is deprecated and "
             "will be removed in a future version. "
-            "Please use the 'render_opts' dictionary instead.",)
+            "Please use the 'render_opts' dictionary instead.", )
 
     # The new 'render_opts' dictionary (if provided) OVERRIDES everything else
     if render_opts:
@@ -314,8 +331,9 @@ def render(
         data_arrays, columns_defs, search_columns = tablepl.process_pl(
             df, precision, load_column_control, dropdown_select_threshold)
     else:
-        raise ValueError(f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
-                         "Expected pandas or polars DataFrame.")
+        raise ValueError(
+            f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
+            "Expected pandas or polars DataFrame.")
 
     if not data_arrays:
         raise ValueError("DataFrame is empty or could not be processed")
@@ -443,7 +461,8 @@ def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
         warnings.warn(
             "'to_file' argument is ignored in render_inline - output is always returned as string")
     if kwargs.pop("title", None):
-        warnings.warn("'title' argument is ignored in render_inline - no page title in inline mode")
+        warnings.warn(
+            "'title' argument is ignored in render_inline - no page title in inline mode")
 
     # Always render without file output
     html = render(df, to_file=None, **kwargs)
@@ -505,23 +524,18 @@ def get_sample_df(df_type="pandas", size=20):
 
         base_data["value"] = np.random.randn(size)
         base_data["measurement"] = random_choice(
-            [-0.333, 1, -9, 4, 2, np.nan, random.randint(-1000, 10000)], size)
+            [-0.333, 1, -9, 4, 2, np.nan,
+             random.randint(-1000, 10000)], size)
 
         # Include edge cases: NaT, HTML, nested structures, NA values
-        base_data["description"] = random_choice(
-            [
-                np.datetime64("NaT"),
-                "<b>HTML content</b> is allowed",
-                {
-                    "A": [1, 2, 3, [4, 5]]
-                },
-                np.timedelta64("NaT"),
-                pd.NaT,
-                pd.NA,
-                np.datetime64(datetime.datetime.now()),
-            ],
-            size,
-        )
+        base_data["description"] = random_choice([
+            np.datetime64("NaT"), "<b>HTML content</b> is allowed", {
+                "A": [1, 2, 3, [4, 5]]
+            },
+            np.timedelta64("NaT"), pd.NaT, pd.NA,
+            np.datetime64(datetime.datetime.now()),
+        ], size,
+                                                 )
 
         return pd.DataFrame(base_data)
 
@@ -534,20 +548,13 @@ def get_sample_df(df_type="pandas", size=20):
         base_data["measurement"] = random_choice([-0.333, 1, -9, 4, 2, None, 1111.111], size)
 
         # Polars-compatible edge cases
-        base_data["description"] = random_choice(
-            [
-                "Lorem ipsum dolor sit amet",
-                "<b>HTML content</b> is allowed",
-                {
-                    "A": [1, 2, 3, [4, 5]]
-                },
-                100.12345,
-                None,
-                float("nan"),
-                False,
-            ],
-            size,
-        )
+        base_data["description"] = random_choice([
+            "Lorem ipsum dolor sit amet", "<b>HTML content</b> is allowed", {
+                "A": [1, 2, 3, [4, 5]]
+            }, 100.12345, None,
+            float("nan"), False,
+        ], size,
+                                                 )
 
         return pl.DataFrame(base_data, strict=False)
 
@@ -563,11 +570,7 @@ def render_nb(df, iframe=True, height=500, **kwargs):
     """
     if 'render_opts' in kwargs:
         kwargs['render_opts'].update({"unique_id": True, "display_logo": False})
-    html_content = render(
-        df,
-        to_file=None,
-        **kwargs,
-    )
+    html_content = render(df, to_file=None, **kwargs, )
     html_content = html_content.replace('"', "&quot;")
     # html_content = escape(html_content, quote=True)
     iframe_content = f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:{height}px;border:none;"></iframe>'
@@ -609,7 +612,7 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         to_file=to_file,
         title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
         precision=3,
-        num_html=["measurement"],  # , "value"],  #"revenue",
+        format_negatives=["measurement"],  # , "value"],  #"revenue",
         buttons=["colvis", "copy", "excel"],
         render_opts={
             "locale_fmt": False,
@@ -619,9 +622,15 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
             "load_column_control": 1,
             "dropdown_select_threshold": 12,
         },
-        js_opts={"language": {
-            "decimal": "#"
-        }},
+        js_opts={
+            "language": {
+                "decimal": "#",
+                "fixedColumns": {
+                    "left": 1,  # Fixes the first column on the left
+                    "right": 1  # Uncomment to also fix a column on the right
+                }
+            }
+        },
     )
 
 

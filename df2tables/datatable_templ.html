@@ -1,56 +1,52 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <!--[head-->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DataFrame</title>
     <style>
+        :root {
+            --table-border: 1px solid rgba(34, 36, 38, 0.1);
+            --border-color: #e9e9e9;
+            --text-color-gray: gray;
+            --button-color: #0A2540;
+            --selected-bg: #e0f0ff;
+            --selected-border: #66b2ff;
+        }
+
         body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
             font-size: 0.875rem;
-            /* About 14px */
+            /* ≈14px */
             line-height: 1.4;
-            font-family: "Helvetica Neue",
-                Arial,
-                sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
         }
 
-        :root {
-
-            --table_border: 1px solid rgba(34, 36, 38, .1);
-
-        }
-
+        /* DataTables Wrapper */
         .dataTables_wrapper {
             margin-top: 2rem;
         }
 
-        td.dt-nowrap {
-            white-space: nowrap;
-        }
-
+        /* Table Structure */
         table.dataTable {
-            border: var(--table_border);
-            margin: 0 0 0 0;
+            border: var(--table-border);
+            margin: 0;
         }
-
 
         table.dataTable thead td {
-            /*border-left: var(--table_border);*/
             border-style: solid;
-            border-color: #e9e9e9;
+            border-color: var(--border-color);
             border-width: 0 1px 0 0;
-            padding: 0px 0px 0px 0.4rem !important;
+            padding: 0 0 0 0.4rem !important;
         }
 
         table.dataTable td {
-            white-space: nowrap;
-            font-size: 0.875rem;
-            border-left: var(--table_border);
+            border-left: var(--table-border);
+            font-size: 13px;
             max-width: 20rem;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -59,68 +55,27 @@
             float: right;
         }
 
-        .dt-info {
-            padding: 1em;
-            font-size: 10pt;
-            color: gray;
-            display: flex;
-            align-items: center;
-            /* vertically align contents */
-            gap: 6px;
-            /* optional spacing */
-
+        td.dt-nowrap {
+            white-space: nowrap;
         }
 
-        div.dt-container div.dt-layout-row {
-            margin: 0.5em 0 0 0;
-
-        }
-
-        custom.select {
-            color: black;
-            max-width: 15.5em;
-            margin: 1px;
-        }
-
-        .dtlogo {
-            opacity: 0.5;
-            width: auto;
-            display: block;
-            z-index: 2;
-            position: absolute;
-            top: 0px;
-            right: 0px;
-            margin: 1em;
-        }
-
-        .dt-info {
-            padding: 0;
-            font-size: 9pt;
-            color: gray;
-        }
-
+        /* Header Styling */
         span.dt-column-title {
-            white-space: wrap;
+            font-size: 13px;
             font-weight: 600;
-            font-size: 0.87rem;
             line-height: 1.1;
+            white-space: wrap;
         }
 
-
-        /* Default state */
+        /* Input Styling */
         .dt-input {
-            /*  border: 2px solid #ccc;
-            padding: 6px 10px; */
             border-radius: 6px;
             transition: all 0.2s ease-in-out;
-
         }
 
-        /* Highlight only when user typed something */
         input.dt-input:not(:placeholder-shown) {
-            background-color: #e0f0ff !important;
-            /* light blue */
-            border-color: #66b2ff !important;
+            background-color: var(--selected-bg) !important;
+            border-color: var(--selected-border) !important;
             font-weight: bold;
         }
 
@@ -130,18 +85,29 @@
             cursor: pointer;
         }
 
-
-        div.dtcc-title {
-            font-weight: 600;
+        /* Info Section */
+        .dt-info {
+            padding: 0;
+            font-size: 12px;
+            color: var(--text-color-gray);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        table.dataTable span.dtcc span.dtcc-button-icon {
-            color: #0A2540;
-            /* #0A2540  #00457C #0D47A1  #0A3D62 #052C65 */
-            --dt-row-selected-stripe-alpha: 0.99
+        /* Layout */
+        div.dt-container div.dt-layout-row {
+            margin: 0.5em 0 0 0;
         }
 
+        /* Buttons */
+        div.dt-buttons {
+            margin-right: 1rem;
+        }
 
+        button.dt-button {
+            padding: 0.2rem 0.5rem !important;
+        }
 
         .custom_btn {
             display: inline-flex;
@@ -149,11 +115,14 @@
             justify-content: center;
             gap: 2px;
             padding: 3px 4px;
-            cursor: pointer;
             border: 1px solid #ccc;
-            background: #f7f7f7;
             border-radius: 3px;
-            /* margin:0 1em 0 0; */
+            background: #f7f7f7;
+            cursor: pointer;
+        }
+
+        .custom_btn:hover {
+            background: #e9e9e9;
         }
 
         .custom_btn .icon {
@@ -162,37 +131,87 @@
             justify-content: center;
         }
 
-        .custom_btn:hover {
-            background: #e9e9e9;
+        /* Column Control */
+        div.dtcc-title {
+            font-weight: 600;
         }
 
-        button.dt-button {
-            padding: .2rem 0.5rem !important;
+        table.dataTable span.dtcc span.dtcc-button-icon {
+            color: var(--button-color);
+            --dt-row-selected-stripe-alpha: 0.99;
         }
 
-        div.dt-buttons {
-            margin-right: 1rem;
-
+        /* Logo */
+        .dtlogo {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: auto;
+            margin: 1em;
+            opacity: 0.5;
+            display: block;
+            z-index: 2;
         }
 
-    </style><!--[scripts-->
-    <link href="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.css" rel="stylesheet" integrity="sha384-wSlKDmHlZXDO0o5ZHsloB4i8j/JsaA8Jx0uiAW7ECdNdWBoJZXeLnYbh7yCB09Os" crossorigin="anonymous">
-    <script src="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.js" integrity="sha384-Db6ik1fBYSPYBHoWXu+DJTvPGs+KGoiEMJC36Hp2uJfaHwUWOCZvWxaCnc/4rEBs" crossorigin="anonymous"></script>
+        /* Custom Elements */
+        custom.select {
+            color: black;
+            max-width: 15.5em;
+            margin: 1px;
+        }
+
+        /* Allow the shadow pseudo-element to render outside the fixed cell */
+        table.dataTable td.dtfc-fixed-start,
+        table.dataTable th.dtfc-fixed-start,
+        table.dataTable td.dtfc-fixed-left,
+        table.dataTable th.dtfc-fixed-left {
+            overflow: visible !important;
+        }
+
+        #tabcnt {
+            width: fit-content;
+            margin: 0 0 0 0.5rem;
+        }
+
+        #tabcnt:has(.dtfc-fixed-left),
+        #tabcnt:has(.dtfc-fixed-right) {
+            width: 100%;
+            overflow-x: auto;
+            /* ← needed, they omitted this too */
+        }
+    </style>
+    <!--[scripts-->
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.0/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
+
+    <!-- JS -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/2.1.0/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
+    <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
     <!--scripts]-->
     <!--head]-->
 </head>
-
 <body>
     <div class="pure-g">
         <div class="pure-u-1 pure-u-md-1-1" style="padding:0px;">
             <div id="loading" style="display:none;">
                 Loading…
             </div>
-            <div id="tabcnt" style="width: fit-content; margin: 0 0 0 0.5rem;">
+            <div id="tabcnt">
                 <p><!--[title-->
-                    <!--title]-->
-                </p><!--[table_markup-->
-                <table id="pd_datatab" style="width:auto;" class="display compact hover order-column"></table><!--table_markup]-->
+                 <!--title]--></p><!--[table_markup-->
+                <table id="pd_datatab" style="width:100%;" class="display compact hover order-column"></table><!--table_markup]-->
             </div>
         </div><!--[datatables_logo-->
         <figure class="dtlogo">
@@ -209,13 +228,14 @@
             DataTable.type("num", "className", "dt-body-right");
             DataTable.type("num-fmt", "className", "dt-body-right");
             DataTable.type("date", "className", "dt-body-right");
+
             if (DataTable.ColumnControl) {
                 const active_funnel = '<svg id="funnel_menu_a" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-icon lucide-funnel"> <rect x="-4" y="-4" width="32" height="32" fill="#0B57D0"/> <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/> </svg> ';
                 const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" id="funnel_menu_p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
+
                 DataTable.ColumnControl.icons["menu"] = inactive_funnel;
                 DataTable.ColumnControl.Button.prototype._checkActive = function() {
                     var curr_icon = this._dom.icon.innerHTML || "";
-                    /* let is_top_menu = !this._dom.dropdownDisplay;     */
                     if (this._s.active === true || Object.values(this._s.activeList).includes(true)) {
                         this._dom.state.innerHTML = DataTable.ColumnControl.icons.tick;
                         this._dom.button.classList.add("dtcc-button_active");
@@ -250,11 +270,12 @@
             function _anyNumber(a) {
                 var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
                 if (typeof a === "string") {
-                    a = a.replace(",", ".").replace(/ /g, "").match(reg);
+                    a = a.replaceAll(",", ".").replace(/ /g, "").match(reg);
                     a = a !== null ? parseFloat(a[0]) : Number.POSITIVE_INFINITY;
                 }
                 return a;
             }
+
             jQuery.extend(jQuery.fn.dataTableExt.oSort, {
                 "num-html-pre": function(a) {
                     var x = String(a).replace(/<[\s\S]*?>/g, "");
@@ -267,10 +288,11 @@
                     return a < b ? 1 : a > b ? -1 : 0;
                 }
             });
+
             const add_expand_btn = /*[add_expand_btn*/ true /*add_expand_btn]*/ ;
 
             function search_info() {
-                if (search_columns || search_columns.length > 0) {
+                if (search_columns && search_columns.length > 0) {
                     const searchableColumns = search_columns;
                     let search_msg = "[" + searchableColumns.map(col => `'${col}'`).join(", ") + "]";
                     if (search_msg.length > 150) {
@@ -283,8 +305,9 @@
                         display: "inline-flex",
                         color: "#667"
                     }).text(search_msg);
-                    $("#" + TABLE_ID + "_wrapper" + " input.dt-input").after(searchNote);
+                    $("#" + TABLE_ID + "_wrapper .dt-search input.dt-input").after(searchNote);
                 }
+
                 if (add_expand_btn) {
                     var dn_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>';
                     var up_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>';
@@ -292,15 +315,17 @@
                     var tools = $("<span>").css({
                         display: "flex",
                         right: "",
-                        "font-size": "8pt"
+                        "font-size": "11px"
                     }).html(expand_butt);
+
                     $("#" + TABLE_ID + "_info").before(tools);
-                    $("div.dt-buttons").hide();
-                    $("div.dt-length").hide();
+                    $("#" + TABLE_ID + "_wrapper").find("div.dt-buttons").hide();
+                    $("#" + TABLE_ID + "_wrapper").find("div.dt-length").hide();
+
                     tools.on("click", function(event) {
                         event.preventDefault();
-                        $("div.dt-buttons").toggle();
-                        $("div.dt-length").toggle();
+                        $("#" + TABLE_ID + "_wrapper").find("div.dt-buttons").toggle();
+                        $("#" + TABLE_ID + "_wrapper").find("div.dt-length").toggle();
                         var iconSpan = $(this).find(".icon");
                         var button = $(this).find(".custom_btn");
                         var isDown = iconSpan.html().indexOf("chevron-down") !== -1;
@@ -314,18 +339,21 @@
                     });
                 }
             }
+
             const render_precision = /*[precision*/ 2 /*precision]*/ ;
             var thousands = "";
             var decimal = ".";
+
             const render_num = (data, type) => {
-                if (data === null) {
+                if (data == null) {
                     return null;
                 }
                 const number = DataTable.render.number(thousands, decimal, render_precision).display(data);
-                if (type !== "display") return number;
+                if (type !== "display") return data;
                 const color = data < 0 ? "red" : "black";
                 return '<span style="color:' + color + '">' + number + "</span>";
             };
+
             const tab_data =
                 /*[tab_data*/
                 [
@@ -338,11 +366,12 @@
                     [
                         ["C", {
                             a: 1
-                        }], -.52, "B", 1111.11, 7e4, "Budget", "0", 0, "High priority"
+                        }], -.52, "B", "1111.11", "7e4", "Budget", "0", 0, "High priority"
                     ]
                 ]
             /*tab_data]*/
             ;
+
             const columns =
                 /*[tab_columns*/
                 [{
@@ -394,12 +423,14 @@
                 }]
             /*tab_columns]*/
             ;
+
             const search_columns =
                 /*[search_columns*/
                 ["col_1a", "C 3", "col6", "col7", "col9"]
             /*search_columns]*/
             ;
             const search_val = search_columns && search_columns.length > 0 ? "search" : null;
+
             const custom_layout = {
                 top1Start: "info",
                 top2Start: search_val,
@@ -407,59 +438,92 @@
                     buttons: ["colvis", "copy"]
                 }],
                 topEnd: null,
-                bottomStart: null,
+                bottomStart: "paging",
                 bottomEnd: null,
-                bottom: "paging"
+                bottom: null
             };
+
             const TABLE_ID = /*[table_id*/ "pd_datatab"
             /*table_id]*/
             ;
             const locale_fmt = /*[locale_fmt*/ false /*locale_fmt]*/ ;
+
             if (locale_fmt) {
                 DataTable.type("date", "render", DataTable.render.date());
                 DataTable.type("num", "render", DataTable.render.number());
             } else {
                 DataTable.type("num", "render", DataTable.render.number(thousands, decimal, render_precision));
             }
+
             const clearButton = '<button id="custom_clear1" class="custom_btn"><span class="icon"><svg id="custom_clear2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
+
             let table_opts = {
                 data: tab_data,
                 layout: custom_layout,
                 autoWidth: false,
                 columns: columns,
                 pageLength: 50,
-                responsive: true,
+                responsive: false,
                 order: false,
                 processing: true,
                 language: {
                     search: "_INPUT_",
                     searchPlaceholder: "Search in columns:",
-                    sInfoFiltered: "(filtered from _MAX_ total _ENTRIES-MAX_ ) " + clearButton
+                    sInfoFiltered: "(filtered from _MAX_ total entries) " + clearButton
                 },
                 initComplete: search_info
             };
+
             const custom_config_opts = /*[js_opts*/ {} /*js_opts]*/ ;
+            const _PAGING_WARN_LIMIT = /*[paging_warn_limit*/ 500 /*paging_warn_limit]*/ ;
+
             if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
                 deepMerge(table_opts, custom_config_opts);
+
+                // Adjust layout wrapper if FixedColumns is active
+                if (custom_config_opts.fixedColumns) {
+                    $("#" + TABLE_ID).parent().css({
+                        "width": "100%",
+                        "max-width": "100%",
+                        "overflow-x": "auto"
+                    });
+                }
+
+                // Warn before building table when paging is disabled on large datasets
+                if (table_opts.paging === false && tab_data.length > _PAGING_WARN_LIMIT) {
+                    const warn = document.createElement("div");
+                    warn.innerHTML =
+                        "<strong>⚠ Performance warning</strong> — " +
+                        "<strong>" + tab_data.length.toLocaleString() + "</strong> rows loaded into the DOM at once. " +
+                        "Sorting, filtering and scrolling will all be slower. " +
+                        "<br><em>Tip: drop <code>paging: false</code> and set " +
+                        "<code>pageLength: 1000</code> instead — only 1000 rows in the DOM at a time, " +
+                        "full data still searchable.</em> " +
+                        "<button onclick=\"this.parentNode.remove()\" " +
+                        "style=\"float:right;border:none;background:none;cursor:pointer;font-size:1rem\">&#x2715;</button>";
+                    warn.style.cssText = "background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #e6a817;color:#664d03;font-size:.875rem;margin-bottom:.5rem;padding:.5rem .75rem;position:relative";
+                    document.getElementById("tabcnt").insertAdjacentElement("beforebegin", warn);
+                }
             }
+
             const build_table = function() {
                 let table = $("#" + TABLE_ID).DataTable(table_opts);
-                $(document).on("click", e => {
-                    if (e.target.id.includes("custom_clear")) {
-                        try {
-                            table.search("").columns().columnControl.searchClear().draw();
-                        } catch (err) {
-                            console.log(err);
-                            table.search("").draw();
-                        }
+                $(document).on("click", "#custom_clear1", e => {
+                    e.preventDefault();
+                    try {
+                        table.search("").columns().columnControl.searchClear().draw();
+                    } catch (err) {
+                        console.log(err);
+                        table.search("").draw();
                     }
                 });
             };
+
             $(document).ready(function() {
                 build_table();
             });
         })();
-    </script> <!--min_content]-->
+    </script>
+    <!--min_content]-->
 </body>
-
 </html>

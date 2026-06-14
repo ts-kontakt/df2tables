@@ -28,30 +28,59 @@ def _prepare_dataframe_pl(df, precision):
 
 def _generate_column_defs_pl(df, load_column_control=True, dropdown_select_threshold=9):
     """
-    Generates the column definitions list for DataTables from a Polars
-    df.
+    Generates the column definitions list for DataTables from a Polars df.
+
+    - Float columns always get a text search filter (ignore threshold).
+    - Integer columns use the dropdown_select_threshold (dropdown if few unique values).
+    - Other non‑float columns also use the dropdown_select_threshold.
     """
     columns = []
     for col_name in df.columns:
-        try:
-            n_unique = df[col_name].n_unique()
-        except Exception:
-            print("! unique error", df[col_name])
-            n_unique = dropdown_select_threshold
+        # Get column dtype to decide filter behaviour
+        col_dtype = df[col_name].dtype
+
+        # Determine if column is float or integer (strict check)
+        is_float = col_dtype.is_float()
+        is_integer = col_dtype.is_integer()
+
+        # Count unique values if needed (not for float)
+        n_unique = None
+        if not is_float:
+            try:
+                n_unique = df[col_name].n_unique()
+            except Exception:
+                n_unique = dropdown_select_threshold  # fallback
 
         col_cleaned = col_name.replace("_", " ")
 
-        if n_unique < dropdown_select_threshold:
-            col_def = {"title": col_cleaned}
-            if load_column_control:
-                col_def["columnControl"] = ["order", ["title", "searchList"]]
-        else:
+        if is_float:
+            # Float columns always get text search, no dropdown
             col_def = {"title": col_cleaned, "searchable": True}
             if load_column_control:
                 col_def["columnControl"] = ["order", ["title", "search"]]
+        elif is_integer:
+            # Integer columns: use threshold for dropdown vs text search
+            if n_unique < dropdown_select_threshold:
+                col_def = {"title": col_cleaned}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "searchList"]]
+            else:
+                col_def = {"title": col_cleaned, "searchable": True}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "search"]]
+        else:
+            # Other non‑float columns (strings, categoricals, booleans, etc.)
+            # behave like the original logic: threshold applies
+            if n_unique < dropdown_select_threshold:
+                col_def = {"title": col_cleaned}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "searchList"]]
+            else:
+                col_def = {"title": col_cleaned, "searchable": True}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "search"]]
 
         col_def["orderable"] = True
-
         columns.append(col_def)
 
     return columns
