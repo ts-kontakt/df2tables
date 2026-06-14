@@ -19,16 +19,16 @@ render_inline(df, **kwargs)
 
 ## Features
 
-- Converts `pandas` and `polars` dataframes interactive standalone HTML tables
+- Converts `pandas` and `polars` DataFrames  into interactive standalone HTML tables
 - **Web Framework Ready**: Specifically designed for easy embedding in Flask, Django, FastAPI, and other web frameworks
 - Browse **large datasets** using filters and sorting 
-- Works **independently of Jupyter**  or live server (though [notebook](#rendering-in-notebook) rendering  is supported) 
-- Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and data quality issues interactively
-- **Customization**: [Configuring DataTables from Python](#customization-configuring-datatables-from-python) *(new)*
+- Works **independently of Jupyter** or a running web server (though [notebook](#rendering-in-notebook) rendering is supported) 
+- Useful for training dataset inspection and feature engineering: Quickly browse through large datasets, identify outliers, and catch data quality issues interactively
+- **Customization**: [Configuring DataTables from Python](#configure-datatables-directly-from-python-using-js_opts) 
 
 ## Screenshots
 
-![df2tables demo with 1,000,000 rows](https://github.com/ts-kontakt/df2tables/blob/main/df2tables-big.gif?raw=true)
+![df2tables demo with 1,000,000 rows](https://raw.githubusercontent.com/ts-kontakt/df2tables/main/df2tables-big.gif)
 
 A standalone HTML file containing a JavaScript array as data source for DataTables has several advantages. For example, you can browse quite large datasets locally.
 
@@ -152,58 +152,12 @@ The **`table_attrs`** argument accepts a dictionary of HTML table attributes, su
 
 See an example of multiple tables with different configuration options placed in separate tabs (jQuery UI Tabs): [flask_multiple_tables_tabs.py](https://github.com/ts-kontakt/df2tables/blob/main/flask_multiple_tables_tabs.py)
 
-### Minimal Flask Example
-Here's a complete, minimal **working** Flask application that demonstrates how to properly embed a DataTable with all required dependencies:
 
-```python
-import df2tables as df2t
-from flask import Flask, render_template_string
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    # Generate sample data (or use your own DataFrame)
-    df = df2t.get_sample_df()
-    df_title = "DataFrame Rendered as DataTable inline in <strong>Flask</strong>"
-
-    string_datatable = df2t.render_inline(df)
-
-    # Embed in a complete HTML template with all required dependencies
-    return render_template_string(
-        """
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <style>
-        body {
-            font-size: 0.875rem;line-height: 1.4;font-family: "Helvetica Neue",Arial,sans-serif;
-            }
-        </style>
-            <title>Flask Data Dashboard</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.css" rel="stylesheet" integrity="sha384-wSlKDmHlZXDO0o5ZHsloB4i8j/JsaA8Jx0uiAW7ECdNdWBoJZXeLnYbh7yCB09Os" crossorigin="anonymous">
-        <script src="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.js" integrity="sha384-Db6ik1fBYSPYBHoWXu+DJTvPGs+KGoiEMJC36Hp2uJfaHwUWOCZvWxaCnc/4rEBs" crossorigin="anonymous"></script>
-        </head>
-        <body style="background-color: #f4f4f4;">
-            <div style="background-color: #fff; padding: 20px; margin: 20px;">
-                <h1>My Flask Data Dashboard</h1>
-                {{ inline_datatable | safe }}
-            </div>
-        </body>
-        </html>
-        """,
-        inline_datatable=string_datatable,
-    )
-
-if __name__ == "__main__":
-    app.run(debug=True)
-```
 *Note: Pandas DataFrame indexes are not rendered by default. If you want to enable indexes in an HTML table, simply call `df2tables.render(df.reset_index(), args...)`*
 
-## Customization: Configuring DataTables from Python
+## Configure DataTables directly from Python using `js_opts`
 
-You can now customize DataTables behavior directly from Python by passing configuration options through the new `js_opts` parameter. This allows you to control [DataTables options](https://datatables.net/reference/option/) and [features](https://datatables.net/reference/feature/) without modifying the HTML template. 
+Customize DataTables behavior directly from Python using the `js_opts` parameter. This allows you to control [DataTables options](https://datatables.net/reference/option/) and [features](https://datatables.net/reference/feature/) without modifying the HTML template.
 
 ### Basic Usage
 
@@ -245,6 +199,22 @@ scroll_cfg = {
 }
 df2t.render(df, js_opts=scroll_cfg, to_file="scrolling_table.html")
 ```
+#### 3. Freeze Columns with FixedColumns
+
+For wide datasets, it can be useful to keep one or more columns visible while horizontally scrolling through the table. DataTables provides this functionality through the FixedColumns extension.
+```python
+fixed_col_cfg = {
+    "fixedColumns": {
+        "left": 1  # Pins the leftmost column in place
+    },
+    "scrollCollapse": True,  # Collapses the container height if there are fewer rows than scrollY
+    "scrollY": "60vh",       # Restricts vertical height to 60% of the viewport height
+    "scrollX": "50vw",       # Restricts horizontal width to 50% of the viewport width
+    "responsive": False      # Must be False; responsive mode prevents horizontal scrolling fields
+}
+df2t.render(df, js_opts=fixed_col_cfg, to_file="fixed_columns_table.html")
+```
+**Note on Dependencies:** The FixedColumns feature requires the DataTables FixedColumns extension assets to be loaded. If you are using `render_inline()`, make sure you explicitly include the appropriate CSS and JS extension scripts in your base HTML template.
 
 ### Error Handling
 
@@ -256,7 +226,8 @@ Invalid keys are ignored by DataTables, so malformed or non-existent options **u
 
 **Important Notes**
 
-Some configuration options require additional DataTables extensions or plugins (e.g., Buttons, FixedHeader). At this time, such plugin-dependent options are not yet supported.
+Some DataTables options require additional extensions (e.g., FixedColumns or FixedHeader). When using render(), availability depends on the extensions loaded by the default template. When using render_inline(), you must ensure the required DataTables extensions are loaded by your application. Otherwise, the related options will be ignored or may generate JavaScript console warnings.
+
 
 For best results, start with core features such as `layout` or `language` options before exploring more advanced configurations.
 
