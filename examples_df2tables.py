@@ -6,29 +6,21 @@ import df2tables as df2t
 
 
 def get_output_path(filename):
-    """
-    Return Path object for output file.
-    If filename is just a filename (no path), save to user's home directory.
-    If filename includes a path, use that path and create directories as needed.
-    """
+    """Return a Path for the output file, saving to home dir if no directory component is given."""
     filepath = Path(filename)
     if filepath.parent != Path("."):
-        # User supplied a path - create directories if needed
         filepath.parent.mkdir(parents=True, exist_ok=True)
     else:
-        # Just a filename - save to home directory
         filepath = Path.home() / filepath
-
     return filepath
 
 
 def create_random_dataframe(num_rows=100):
+    """Generate a diverse random DataFrame with HTML color-coded cells."""
     import matplotlib
     import matplotlib.colors as mcolors
     import numpy as np
     import pandas as pd
-
-    """Generate pandas DataFrame with diverse random data types and HTML color codes."""
 
     def get_color_gradient(num_colors=100):
         """Generate YlGnBu gradient color codes with contrasting text."""
@@ -49,8 +41,8 @@ def create_random_dataframe(num_rows=100):
     credit_ratings = ["Excellent", "Good", "Average", "Fair", "Poor"]
 
     def generate_random_date(min_year=1990, max_year=datetime.now().year):
-        """Generate random date between min_year and max_year."""
-        start = datetime(min_year, 1, 1, 00, 00, 00)
+        """Generate a random date between min_year and max_year."""
+        start = datetime(min_year, 1, 1, 0, 0, 0)
         years = max_year - min_year + 1
         end = start + timedelta(days=365 * years)
         return (start + (end - start) * random.random()).date()
@@ -70,7 +62,6 @@ def create_random_dataframe(num_rows=100):
         row = [
             str(generate_random_date()),
             random.choice(priority_levels),
-            # random.choice(words),
             random.randint(100, 100000),
             random.uniform(-10, 10),
             random.uniform(-1, 1),
@@ -81,13 +72,13 @@ def create_random_dataframe(num_rows=100):
         result.append(row)
 
     columns = [f"col{i}" for i in range(len(result[0]))]
-    df = pd.DataFrame(result, columns=columns)
-    return df
-    
-    
-def create_random_dataframe2(num_rows: int = 100):
-    import numpy as np
+    return pd.DataFrame(result, columns=columns)
+
+
+def create_random_dataframe2(num_rows=100):
+    """Generate a synthetic DataFrame with dates, text, numeric and categorical columns."""
     import pandas as pd
+
     healthcare_priorities = [
         "Low priority",
         "Medium priority",
@@ -104,8 +95,9 @@ def create_random_dataframe2(num_rows: int = 100):
         """.split()
         if len(word.strip()) > 3
     ]
-    def get_random_date(min_year: int = 1990) -> datetime.date:
-        """Generates a random date between min_year and the current year."""
+
+    def get_random_date(min_year=1990):
+        """Generate a random date between min_year and the current year."""
         current_year = datetime.now().year
         start = datetime(min_year, 1, 1)
         end = datetime(current_year, 12, 31)
@@ -139,12 +131,13 @@ def create_random_dataframe2(num_rows: int = 100):
     ]
     return pd.DataFrame(data, columns=columns)
 
-def create_complex_polars_dataframe(num_rows=100):
-    """Generate complex Polars DataFrame with diverse data types and variable-length nested structures."""
+
+def create_complex_polars_dataframe(num_rows=200):
+    """Generate a Polars DataFrame with diverse column types for demonstration."""
     try:
         import polars as pl
     except ImportError:
-        print(" Warning: polars is not installed. Install with: pip install polars")
+        print("Warning: polars is not installed. Install with: pip install polars")
         return None
 
     base_date = datetime(2024, 1, 1)
@@ -173,51 +166,40 @@ def create_complex_polars_dataframe(num_rows=100):
 
 
 def render_random_table(num_rows):
-    """Render random DataFrame to HTML table file."""
+    """Render a random DataFrame to an HTML table file."""
     df = create_random_dataframe(num_rows=num_rows)
-    sys_info = ""
     outfile = get_output_path("rnd_table2.html")
     df2t.render(
         df,
         to_file=str(outfile),
         precision=3,
         format_negatives=["col2", "col3"],
-        render_opts= {'reorder' : 1},
-        title=f"Example Diverse Random Data {num_rows:,d} rows! {sys_info}".replace(
-            ",", " "
-        ),
+        render_opts={"reorder": 1},
+        title=f"Example Diverse Random Data {num_rows:,d} rows!".replace(",", " "),
     )
     print(f"Saved to: {outfile}")
 
 
-
 def render_installed_packages():
+    """Render the list of installed Python packages to an HTML table file."""
     import pandas as pd
 
-    """Render list of installed Python packages to HTML table."""
-
     def get_installed_packages():
-        """Get list of installed packages or fallback to random data."""
+        """Return a DataFrame of installed packages, falling back to random data on error."""
         try:
             import pkg_resources
 
             header_list = ["name        ", "version", "full package path"]
             packages = [repr(d).split(" ") for d in sorted(pkg_resources.working_set)]
             packages = sorted(packages, key=lambda x: x[0].lower())
-            df = pd.DataFrame(packages, columns=header_list)
+            return pd.DataFrame(packages, columns=header_list)
         except ModuleNotFoundError:
             print("Error loading module pkg_resources - using random data")
-            df = create_random_dataframe(num_rows=100)
-        return df
-
-    packages_df = get_installed_packages()
+            return create_random_dataframe(num_rows=100)
 
     outfile = get_output_path("pkg_table.html")
-    df2t.render(packages_df, to_file=str(outfile))
+    df2t.render(get_installed_packages(), to_file=str(outfile))
     print(f"Saved to: {outfile}")
-
-
-
 
 
 def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
@@ -229,7 +211,6 @@ def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
     tickers = [alternative_ticker, primary_ticker]
     end_date = date.today()
     start_date = end_date - timedelta(days=years_back * 365)
-
     price_data = yf.download(tickers, start=start_date, end=end_date)
 
     outfile = get_output_path("price_data.html")
@@ -238,43 +219,42 @@ def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
 
 
 def render_polars_dataframe(num_rows=100, cfg=None):
-    """Create and render complex Polars DataFrame to HTML table."""
+    """Create and render a Polars DataFrame to an HTML table file."""
     polars_df = create_complex_polars_dataframe(num_rows)
-
     if polars_df is None:
         return
 
     outfile = get_output_path("polars_table.html")
+    cfg["fixedColumns"] = {"left": 1}
     df2t.render(
         polars_df,
         to_file=str(outfile),
         format_negatives=True,
-        title=f"Complex Polars DataFrame - {num_rows:,d} rows".replace(",", " "),
-        js_opts=cfg
+        title=f"Complex Polars DataFrame - {num_rows:,d} rows <br> <i>(Scroll right to see fixed column on left)</i>",
+        js_opts=cfg,
     )
     print(f"Saved to: {outfile}")
 
 
 config = {
-    "missing": {"missing": None}, #bad keys working 
-    "none_existent": True, #bad keys should not do harm 
+    "missing": {"missing": None},  # bad keys working
+    "none_existent": True,  # bad keys should not do harm
     "layout": {
         "top2end": "pageLength",
         "top1end": "info",
         "topend": "search",
     },
     "language": {
-             "searchPlaceholder": "Search in all text columns"
+        "searchPlaceholder": "Search in all text columns"
     },
-    'caption': 'Custom options passed to table',
+    "caption": "Custom options passed to table",
     "scrollCollapse": True,
-    "scrollY": '50vh',
-    "scrollX": "60rem"
-    
+    "scrollY": "50vh",
+    "scrollX": "60rem",
 }
 
 if __name__ == "__main__":
-    render_polars_dataframe(100, config)
+    render_polars_dataframe(200, config)
     render_installed_packages()
     render_random_table(10_000)
     render_stock_prices("SPY", "GLD")

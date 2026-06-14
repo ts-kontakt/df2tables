@@ -1,6 +1,7 @@
 import uuid
-import pandas as pd
+
 import df2tables as df2t
+import pandas as pd
 from flask import Flask, render_template_string
 from numpy.random import default_rng
 
@@ -12,9 +13,6 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flask DataTables Demo</title>
-    <link href="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.css" rel="stylesheet" integrity="sha384-wSlKDmHlZXDO0o5ZHsloB4i8j/JsaA8Jx0uiAW7ECdNdWBoJZXeLnYbh7yCB09Os" crossorigin="anonymous">
-    <script src="https://cdn.datatables.net/v/dt/jq-3.7.0/dt-2.3.4/b-3.2.5/b-colvis-3.2.5/b-html5-3.2.5/cr-2.1.2/cc-1.1.1/datatables.min.js" integrity="sha384-Db6ik1fBYSPYBHoWXu+DJTvPGs+KGoiEMJC36Hp2uJfaHwUWOCZvWxaCnc/4rEBs" crossorigin="anonymous"></script>
-    
     <style>
         body {
             background-color: #f4f4f4;
@@ -38,6 +36,23 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
             font-size: 0.875rem;
         }
     </style>
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.0/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
+    <!-- JS -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/2.1.0/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
+    <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
 </head>
 <body>
     <h1>Multiple DataFrames</h1>
@@ -50,32 +65,28 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 
 @app.route("/")
 def home():
-    """Render a page displaying two sample DataFrames as interactive HTML tables."""
-    # First table
+    """Render two sample DataFrames as interactive DataTables."""
     df1 = df2t.get_sample_df()
     html_table1 = df2t.render_inline(
         df1,
-        num_html= ['value', 'measurement'],
-        # The display class is a short-cut for specifying the stripe hover order-column row-border
-        # https://datatables.net/examples/styling/display.html 
-        table_attrs={"id": uuid.uuid4().hex, "class": "display"}
+        num_html=["value", "measurement"],
+        table_attrs={"id": uuid.uuid4().hex, "class": "display"},
     )
 
-    # Second table
     rng = default_rng(seed=42)
     df2 = pd.DataFrame(
         rng.random((1000, 4)),
-        columns=[f"Col{i}" for i in range(1, 5)]
+        columns=[f"Col{i}" for i in range(1, 5)],
     )
     html_table2 = df2t.render_inline(
         df2,
-        table_attrs={"id": uuid.uuid4().hex, "class": "display compact"}
+        table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
     )
 
     return render_template_string(
         PAGE_TEMPLATE,
         html_table1=html_table1,
-        html_table2=html_table2
+        html_table2=html_table2,
     )
 
 
