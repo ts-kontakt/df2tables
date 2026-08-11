@@ -5,201 +5,220 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DataFrame</title>
     <style>
-        :root {
-            --table-border: 1px solid rgba(34, 36, 38, 0.1);
-            --border-color: #e9e9e9;
-            --text-color-gray: gray;
-            --button-color: #0A2540;
-            --selected-bg: #e0f0ff;
-            --selected-border: #66b2ff;
-        }
+    :root {
+    --table-border: 1px solid rgba(34, 36, 38, 0.1);
+    --border-color: #e9e9e9;
+    --text-color-gray: gray;
+    --button-color: #0A2540;
+    --selected-bg: #e0f0ff;
+    --selected-border: #66b2ff;
+    }
 
-        body {
-            font-family: "Helvetica Neue", Arial, sans-serif;
-            font-size: 0.875rem;
-            /* ≈14px */
-            line-height: 1.4;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-        }
+    body {
+    font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI Variable Text", "Segoe UI", system-ui,
+    Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", "Liberation Sans", sans-serif;
+    font-size: 12px;
+    line-height: 1.45;
+    }
 
-        /* DataTables Wrapper */
-        .dataTables_wrapper {
-            margin-top: 2rem;
-        }
+    input,
+    button,
+    select {
+    font: inherit;
+    color: inherit;
+    }
 
-        /* Table Structure */
-        table.dataTable {
-            border: var(--table-border);
-            margin: 0;
-        }
+    /* DataTables Wrapper */
+    .dataTables_wrapper {
+    margin-top: 2rem;
+    }
 
-        table.dataTable thead td {
-            border-style: solid;
-            border-color: var(--border-color);
-            border-width: 0 1px 0 0;
-            padding: 0 0 0 0.4rem !important;
-        }
+    /* Table Structure */
+    table.dataTable {
+    border: var(--table-border);
+    margin: 0;
+    }
 
-        table.dataTable td {
-            border-left: var(--table-border);
-            font-size: 13px;
-            max-width: 20rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+    table.dataTable thead td {
+    border-style: solid;
+    border-color: var(--border-color);
+    border-width: 0 1px 0 0;
+    padding: 0 0 0 0.4rem !important;
+    }
 
-        table.dataTable td span {
-            float: right;
-        }
+    table.dataTable td {
+    border-left: var(--table-border);
+    font-size: 12px;
+    max-width: 20rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
 
-        td.dt-nowrap {
-            white-space: nowrap;
-        }
+    table.dataTable td span {
+    float: right;
+    }
 
-        /* Header Styling */
-        span.dt-column-title {
-            font-size: 13px;
-            font-weight: 600;
-            line-height: 1.1;
-            white-space: wrap;
-        }
+    td.dt-nowrap {
+    white-space: nowrap;
+    }
 
-        /* Input Styling */
-        .dt-input {
-            border-radius: 6px;
-            transition: all 0.2s ease-in-out;
-        }
+    /* Header Styling */
+    span.dt-column-title {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: wrap;
+    }
 
-        input.dt-input:not(:placeholder-shown) {
-            background-color: var(--selected-bg) !important;
-            border-color: var(--selected-border) !important;
-            font-weight: bold;
-        }
+    /* Input Styling */
+    .dt-input {
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+    }
 
-        input[type="search"]::-webkit-search-cancel-button {
-            -webkit-appearance: auto;
-            appearance: auto;
-            cursor: pointer;
-        }
+    input.dt-input:not(:placeholder-shown) {
+    background-color: var(--selected-bg) !important;
+    border-color: var(--selected-border) !important;
+    font-weight: bold;
+    }
 
-        /* Info Section */
-        .dt-info {
-            padding: 0;
-            font-size: 12px;
-            color: var(--text-color-gray);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+    input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: auto;
+    appearance: auto;
+    cursor: pointer;
+    }
 
-        /* Layout */
-        div.dt-container div.dt-layout-row {
-            margin: 0.5em 0 0 0;
-        }
+    /* Info Section */
+    .dt-info {
+    padding: 0;
+    font-size: 12px;
+    color: var(--text-color-gray);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    }
 
-        /* Buttons */
-        div.dt-buttons {
-            margin-right: 1rem;
-        }
+    /* Layout */
+    div.dt-container div.dt-layout-row {
+    margin: 0.5em 0 0 0;
+    }
 
-        button.dt-button {
-            padding: 0.2rem 0.5rem !important;
-        }
+    /* Buttons */
+    div.dt-buttons {
+    margin-right: 1rem;
+    }
 
-        .custom_btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-            padding: 3px 4px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            background: #f7f7f7;
-            cursor: pointer;
-        }
+    button.dt-button {
+    padding: 0.2rem 0.5rem !important;
+    }
 
-        .custom_btn:hover {
-            background: #e9e9e9;
-        }
+    .custom_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f7f7f7;
+    cursor: pointer;
+    }
 
-        .custom_btn .icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .custom_btn:hover {
+    background: #e9e9e9;
+    }
 
-        /* Column Control */
-        div.dtcc-title {
-            font-weight: 600;
-        }
+    .custom_btn .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    }
 
-        table.dataTable span.dtcc span.dtcc-button-icon {
-            color: var(--button-color);
-            --dt-row-selected-stripe-alpha: 0.99;
-        }
+    /* Column Control */
+    div.dtcc-title {
+    font-weight: 600;
+    }
 
-        /* Logo */
-        .dtlogo {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: auto;
-            margin: 1em;
-            opacity: 0.5;
-            display: block;
-            z-index: 2;
-        }
+    table.dataTable span.dtcc span.dtcc-button-icon {
+    color: var(--button-color);
+    --dt-row-selected-stripe-alpha: 0.99;
+    }
 
-        /* Custom Elements */
-        custom.select {
-            color: black;
-            max-width: 15.5em;
-            margin: 1px;
-        }
+    /* Logo */
+    .dtlogo {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: auto;
+    margin: 1em;
+    opacity: 0.5;
+    display: block;
+    z-index: 2;
+    }
 
-        /* Allow the shadow pseudo-element to render outside the fixed cell */
-        table.dataTable td.dtfc-fixed-start,
-        table.dataTable th.dtfc-fixed-start,
-        table.dataTable td.dtfc-fixed-left,
-        table.dataTable th.dtfc-fixed-left {
-            overflow: visible !important;
-        }
+    /* Custom Elements */
+    custom.select {
+    color: black;
+    max-width: 15.5em;
+    margin: 1px;
+    }
 
-        #tabcnt {
-            width: fit-content;
-            margin: 0 0 0 0.5rem;
-        }
+    /* Allow the shadow pseudo-element to render outside the fixed cell */
+    table.dataTable td.dtfc-fixed-start,
+    table.dataTable th.dtfc-fixed-start,
+    table.dataTable td.dtfc-fixed-left,
+    table.dataTable th.dtfc-fixed-left {
+    overflow: visible !important;
+    }
 
-        #tabcnt:has(.dtfc-fixed-left),
-        #tabcnt:has(.dtfc-fixed-right) {
-            width: 100%;
-            overflow-x: auto;
-            /* ← needed, they omitted this too */
-        }
-    </style>
-    <!--[scripts-->
+    #tabcnt {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    }
+
+    #tabcnt .dt-container {
+    width: 100%;
+    }
+
+    #tabcnt .dt-layout-table {
+    width: 100%;
+    }
+
+    #tabcnt table.dataTable {
+    width: max-content !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    }
+    </style><!--[scripts-->
     <!-- CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css"><!-- Extensions CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.0/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/4.0.6/css/fixedHeader.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css"><!-- JS -->
+    <!-- jQuery -->
 
-    <!-- JS -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script><!-- DataTables core -->
+
+    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script><!-- Buttons -->
+
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
-    <script src="https://cdn.datatables.net/colreorder/2.1.0/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script><!-- Column / table extensions -->
+
+    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
     <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
-    <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
-    <!--scripts]-->
+    <script src="https://cdn.datatables.net/fixedheader/4.0.6/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script><!--scripts]-->
     <!--head]-->
 </head>
 <body>
@@ -460,6 +479,8 @@
             let table_opts = {
                 data: tab_data,
                 layout: custom_layout,
+                fixedHeader: /*[fixed_header*/ true /*fixed_header]*/,
+                scrollX: /*[scroll_x*/ true /*scroll_x]*/,
                 autoWidth: false,
                 columns: columns,
                 pageLength: 50,
@@ -479,15 +500,6 @@
 
             if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
                 deepMerge(table_opts, custom_config_opts);
-
-                // Adjust layout wrapper if FixedColumns is active
-                if (custom_config_opts.fixedColumns) {
-                    $("#" + TABLE_ID).parent().css({
-                        "width": "100%",
-                        "max-width": "100%",
-                        "overflow-x": "auto"
-                    });
-                }
 
                 // Warn before building table when paging is disabled on large datasets
                 if (table_opts.paging === false && tab_data.length > _PAGING_WARN_LIMIT) {
@@ -523,7 +535,6 @@
                 build_table();
             });
         })();
-    </script>
-    <!--min_content]-->
+    </script> <!--min_content]-->
 </body>
 </html>
