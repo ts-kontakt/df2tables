@@ -29,7 +29,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
             padding: 20px;
             margin-bottom: 30px;
             overflow-x: auto;
-            width: fit-content;
+           
         }
         table.dataTable td {
             white-space: nowrap;
@@ -39,9 +39,10 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     <!-- CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.0/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/4.0.6/css/fixedHeader.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
     <!-- JS -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -49,15 +50,16 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
-    <script src="https://cdn.datatables.net/colreorder/2.1.0/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
     <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/4.0.6/js/dataTables.fixedHeader.min.js"></script>
     <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
 </head>
 <body>
     <h1>Multiple DataFrames</h1>
     <div class="table-container">{{ html_table1 | safe }}</div>
-    <div class="table-container">{{ html_table2 | safe }}</div>
+    <div class="table-container" style="width:fit-content">{{ html_table2 | safe }}</div>
 </body>
 </html>
 """
@@ -69,7 +71,7 @@ def home():
     df1 = df2t.get_sample_df()
     html_table1 = df2t.render_inline(
         df1,
-        num_html=["value", "measurement"],
+        format_negatives=["value", "measurement"],
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
     )
 

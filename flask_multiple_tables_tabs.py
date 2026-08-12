@@ -17,9 +17,10 @@ PAGE_TEMPLATE = """
     <!-- CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.0/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.1.0/css/columnControl.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/4.0.6/css/fixedHeader.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
 
     <!-- JS -->
@@ -28,9 +29,10 @@ PAGE_TEMPLATE = """
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
-    <script src="https://cdn.datatables.net/colreorder/2.1.0/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.1.0/js/dataTables.columnControl.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
     <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/4.0.6/js/dataTables.fixedHeader.min.js"></script>
     <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
 
     <!-- jQuery UI for tabs -->
@@ -105,10 +107,9 @@ PAGE_TEMPLATE = """
                     <li><strong>CSS class:</strong> <code>display</code> - stripe, hover, order-column, row-border</li>
                     <li><strong>Column reorder:</strong> enabled - drag any header left or right to rearrange columns</li>
                     <li><strong>Negative formatting:</strong> enabled - negative values rendered in red</li>
-                    <li><strong>Wrapper:</strong> <code>fit-content</code> - table width adapts to content</li>
                 </ul>
             </div>
-            <div class="fit-content-wrapper">
+            <div class="">
                 {{ table1_html | safe }}
             </div>
         </div>
@@ -239,7 +240,7 @@ def display_tables():
         sample_df.copy(),
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
         format_negatives=True,
-        render_opts={"reorder": 1},
+        render_opts={"reorder": True},
     )
 
     # Table 2: compact styling with custom layout and numeric formatting
@@ -256,13 +257,13 @@ def display_tables():
         sample_df.copy(),
         precision=4,
         table_attrs={"id": uuid.uuid4().hex, "class": "display compact hover"},
-        num_html=["percentage", "change"],
+        format_negatives=["percentage", "change"],
         js_opts=cfg2,
     )
 
     # Table 3: fixed first column, scrollable, no pagination
     cfg3 = {
-        "fixedColumns": {"left": 1},
+        "fixedColumns": {"start": 1},
         "language": {"searchPlaceholder": "Custom search text"},
         "caption": "Custom options passed to table",
         "paging": False,
@@ -281,7 +282,7 @@ def display_tables():
     # Table 4: compact display with numeric formatting, no column control
     table4_html = df2tables.render_inline(
         sample_df.copy(),
-        num_html=["percentage", "change"],
+        format_negatives=["percentage", "change"],
         table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
         render_opts={"load_column_control": False},
     )

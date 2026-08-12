@@ -165,16 +165,20 @@ def create_complex_polars_dataframe(num_rows=200):
     )
 
 
-def render_random_table(num_rows):
-    """Render a random DataFrame to an HTML table file."""
+def render_random_table(num_rows: int = 10_000):
+    """Render a random DataFrame to an HTML table file.
+
+    Args:
+        num_rows: Number of rows to generate. Higher values produce larger files
+                   and longer render times. Above ~50k rows consider using
+                   startfile=False.
+    """
     df = create_random_dataframe(num_rows=num_rows)
     outfile = get_output_path("rnd_table2.html")
     df2t.render(
         df,
         to_file=str(outfile),
         precision=3,
-        format_negatives=["col2", "col3"],
-        render_opts={"reorder": 1},
         title=f"Example Diverse Random Data {num_rows:,d} rows!".replace(",", " "),
     )
     print(f"Saved to: {outfile}")
@@ -202,8 +206,11 @@ def render_installed_packages():
     print(f"Saved to: {outfile}")
 
 
-def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
-    """Fetch and render historical daily closing prices for two tickers."""
+def render_stock_prices(primary_ticker="SPY", alternative_ticker="GLD", years_back=10):
+    """Fetch and render historical daily closing prices for two tickers.
+
+    Requires: pip install yfinance
+    """
     from datetime import date
 
     import yfinance as yf
@@ -219,13 +226,18 @@ def render_stock_prices(primary_ticker, alternative_ticker, years_back=10):
 
 
 def render_polars_dataframe(num_rows=100, cfg=None):
-    """Create and render a Polars DataFrame to an HTML table file."""
+    """Create and render a Polars DataFrame to an HTML table file.
+
+    Requires: pip install polars
+    """
+    if cfg is None:
+        cfg = {}
     polars_df = create_complex_polars_dataframe(num_rows)
     if polars_df is None:
         return
 
     outfile = get_output_path("polars_table.html")
-    cfg["fixedColumns"] = {"left": 1}
+    cfg["fixedColumns"] = {"start": 1}
     df2t.render(
         polars_df,
         to_file=str(outfile),
@@ -236,9 +248,12 @@ def render_polars_dataframe(num_rows=100, cfg=None):
     print(f"Saved to: {outfile}")
 
 
+# Example configuration for render_polars_dataframe.
+# Bad/non-existent keys are intentionally included to demonstrate that
+# df2tables safely ignores unknown options rather than crashing.
 config = {
-    "missing": {"missing": None},  # bad keys working
-    "none_existent": True,  # bad keys should not do harm
+    "missing": {"missing": None},  # intentionally unknown key — safely ignored
+    "none_existent": True,         # intentionally unknown key — safely ignored
     "layout": {
         "top2end": "pageLength",
         "top1end": "info",
@@ -254,6 +269,9 @@ config = {
 }
 
 if __name__ == "__main__":
+    # Large dataset example (uncomment to run):
+    # render_random_table(900_000)
+
     render_polars_dataframe(200, config)
     render_installed_packages()
     render_random_table(10_000)
