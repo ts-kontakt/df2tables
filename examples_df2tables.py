@@ -165,7 +165,7 @@ def create_complex_polars_dataframe(num_rows=200):
     )
 
 
-def render_random_table(num_rows: int = 10_000):
+def render_random_table(num_rows: int = 10_000, cfg=None):
     """Render a random DataFrame to an HTML table file.
 
     Args:
@@ -173,6 +173,9 @@ def render_random_table(num_rows: int = 10_000):
                    and longer render times. Above ~50k rows consider using
                    startfile=False.
     """
+    if cfg is None:
+        cfg = {}
+    
     df = create_random_dataframe(num_rows=num_rows)
     outfile = get_output_path("rnd_table2.html")
     df2t.render(
@@ -180,6 +183,8 @@ def render_random_table(num_rows: int = 10_000):
         to_file=str(outfile),
         precision=3,
         title=f"Example Diverse Random Data {num_rows:,d} rows!".replace(",", " "),
+        format_negatives=True,
+        js_opts=cfg
     )
     print(f"Saved to: {outfile}")
 
@@ -191,14 +196,17 @@ def render_installed_packages():
     def get_installed_packages():
         """Return a DataFrame of installed packages, falling back to random data on error."""
         try:
-            import pkg_resources
+            from importlib.metadata import distributions
 
-            header_list = ["name        ", "version", "full package path"]
-            packages = [repr(d).split(" ") for d in sorted(pkg_resources.working_set)]
-            packages = sorted(packages, key=lambda x: x[0].lower())
-            return pd.DataFrame(packages, columns=header_list)
-        except ModuleNotFoundError:
-            print("Error loading module pkg_resources - using random data")
+            rows = [
+                (dist.metadata["Name"], dist.version, str(dist.locate_file("")))
+                for dist in sorted(
+                    distributions(), key=lambda d: d.metadata["Name"].lower()
+                )
+            ]
+            return pd.DataFrame(rows, columns=["name", "version", "path"])
+        except Exception as e:
+            print(f"Could not read installed packages ({e}) - using random data")
             return create_random_dataframe(num_rows=100)
 
     outfile = get_output_path("pkg_table.html")
@@ -213,7 +221,11 @@ def render_stock_prices(primary_ticker="SPY", alternative_ticker="GLD", years_ba
     """
     from datetime import date
 
-    import yfinance as yf
+    try:
+        import yfinance as yf
+    except ImportError:
+        print("yfinance is not installed. Install with: pip install yfinance")
+        return
 
     tickers = [alternative_ticker, primary_ticker]
     end_date = date.today()
@@ -237,7 +249,7 @@ def render_polars_dataframe(num_rows=100, cfg=None):
         return
 
     outfile = get_output_path("polars_table.html")
-    cfg["fixedColumns"] = {"start": 1}
+    cfg = {**(cfg or {}), "fixedColumns": {"start": 1}}
     df2t.render(
         polars_df,
         to_file=str(outfile),
@@ -263,16 +275,17 @@ config = {
         "searchPlaceholder": "Search in all text columns"
     },
     "caption": "Custom options passed to table",
-    "scrollCollapse": True,
-    "scrollY": "50vh",
-    "scrollX": "60rem",
+    # "scrollCollqapse": True,
+    "scrollCollapse": False,
+    "scrollY": False,
+    "scrollX": False,
 }
 
 if __name__ == "__main__":
     # Large dataset example (uncomment to run):
-    # render_random_table(900_000)
-
-    render_polars_dataframe(200, config)
+    # render_random_table(500_000, cfg=config)
+  
+    render_polars_dataframe(300, config)
     render_installed_packages()
     render_random_table(10_000)
     render_stock_prices("SPY", "GLD")

@@ -1,9 +1,10 @@
+import random
 import uuid
+from datetime import datetime, timedelta
 
 import df2tables as df2t
 import pandas as pd
 from flask import Flask, render_template_string
-from numpy.random import default_rng
 
 app = Flask(__name__)
 
@@ -65,9 +66,33 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 """
 
 
+def generate_orders_dataframe(num_rows=200):
+    """Generate a synthetic orders DataFrame: dates, customers, items, amounts."""
+    tiers = ["Bronze", "Silver", "Gold", "Platinum"]
+    statuses = ["new", "paid", "shipped", "refunded"]
+    start = datetime(2024, 1, 1)
+
+    rows = []
+    for i in range(num_rows):
+        items = random.randint(1, 12)
+        unit_price = round(random.uniform(3, 250), 2)
+        rows.append([
+            (start + timedelta(days=random.randint(0, 365))).strftime("%Y-%m-%d"),
+            f"customer_{i:04d}",
+            random.choice(tiers),
+            items,
+            round(items * unit_price, 2),
+            random.choice(statuses),
+        ])
+    return pd.DataFrame(
+        rows, columns=["date", "customer", "tier", "items", "amount", "status"]
+    )
+
+
 @app.route("/")
 def home():
     """Render two sample DataFrames as interactive DataTables."""
+    # Table 1: the bundled sample DataFrame (mixed edge-case data types)
     df1 = df2t.get_sample_df()
     html_table1 = df2t.render_inline(
         df1,
@@ -75,14 +100,17 @@ def home():
         table_attrs={"id": uuid.uuid4().hex, "class": "display"},
     )
 
-    rng = default_rng(seed=42)
-    df2 = pd.DataFrame(
-        rng.random((1000, 4)),
-        columns=[f"Col{i}" for i in range(1, 5)],
-    )
+    # Table 2: synthetic orders dataset - different column types and
+    # dropdown filters for the low-cardinality columns
+    df2 = generate_orders_dataframe()
     html_table2 = df2t.render_inline(
         df2,
+        precision=2,
         table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
+        js_opts={
+            "pageLength": 10,
+            "language": {"searchPlaceholder": "Filter orders..."},
+        },
     )
 
     return render_template_string(
