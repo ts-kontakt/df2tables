@@ -124,13 +124,24 @@ def _prepare_dataframe(df, precision):
     # Ensure all column names are strings
     df_copy.columns = df_copy.columns.astype(str)
 
+    # Make duplicate column names unique ("a", "a" -> "a", "a_1") so that
+    # df[col] always returns a Series, not a DataFrame
+    if not df_copy.columns.is_unique:
+        seen = {}
+        new_cols = []
+        for col in df_copy.columns:
+            seen[col] = seen.get(col, 0) + 1
+            new_cols.append(col if seen[col] == 1 else f"{col}_{seen[col] - 1}")
+        df_copy.columns = new_cols
+        print(f"Duplicate column names found; renamed to: {new_cols}")
+
     # Round numeric columns to specified precision
     float_cols = df_copy.select_dtypes(include="number").columns
     if len(float_cols) > 0:
         try:
             df_copy[float_cols] = df_copy[float_cols].round(precision)
-        except ValueError:
-            print("!", sys.exc_info())
+        except ValueError as e:
+            print(f"Could not round numeric columns: {e}")
 
     # Convert unhashable types (lists, dicts) to string representation
     for col in df_copy.columns:
@@ -221,7 +232,7 @@ def process_pandas(df, precision, load_column_control, dropdown_select_threshold
     data_arrays = df_prepared.values.tolist()
     search_columns = list(df_prepared.select_dtypes(include=["object", "string"]).columns)
 
-    return data_arrays, columns_defs, search_columns
+    return data_arrays, columns_defs, search_columns, df_prepared
 
 
 def _render_html_template(template_path, template_vars):
@@ -253,12 +264,13 @@ def _render_html_template(template_path, template_vars):
 DEPRECATED_ARGS = {
     "load_column_control",
     "display_logo",
+    "num_html",
 }
 
 DEFAULT_RENDER_OPTS = {
     "locale_fmt": False,
     "reorder": False,
-    "dropdown_select_threshold": 9,  # max unique values for dropdown filters
+    "dropdown_select_threshold": 9,
     "table_id": "pd_datatab",
     "unique_id": False,
     "default_table_class": "display compact hover order-column",
@@ -266,7 +278,9 @@ DEFAULT_RENDER_OPTS = {
     "add_expand_btn": True,
     "display_logo": False,
     "scroll_x": True,
-    "fixed_header": True,
+    # "fixed_header": False,
+    "scroll_y": "70vh",
+    "scroll_collapse": True,
 }
 
 
@@ -276,7 +290,8 @@ def get_cols_with_neg(df):
         try:
             if (df[col] < 0).any():
                 col_indexes.append(i)
-        except (TypeError, NotImplementedError):
+        except (TypeError, NotImplementedError, ValueError):
+            # ValueError: ambiguous truth value (e.g. duplicate column names)
             pass
     return col_indexes
 
@@ -335,9 +350,9 @@ def render(
 
     # Determine DataFrame type and process accordingly
     mod_name = type(df).__module__
-    data_arrays, columns_defs, search_columns = None, None, None
+    data_arrays, columns_defs, search_columns, df_prepared = None, None, None, None
     if "pandas" in mod_name:
-        data_arrays, columns_defs, search_columns = process_pandas(
+        data_arrays, columns_defs, search_columns, df_prepared = process_pandas(
             df, precision, load_column_control, dropdown_select_threshold
         )
     elif "polars" in mod_name:
@@ -345,7 +360,7 @@ def render(
             from . import tablepl
         except ImportError:
             import tablepl
-        data_arrays, columns_defs, search_columns = tablepl.process_pl(
+        data_arrays, columns_defs, search_columns, df_prepared = tablepl.process_pl(
             df, precision, load_column_control, dropdown_select_threshold
         )
     else:
@@ -354,8 +369,8 @@ def render(
             "Expected pandas or polars DataFrame."
         )
 
-    if not data_arrays:
-        raise ValueError("DataFrame is empty or could not be processed")
+    if data_arrays is None:
+        raise ValueError("DataFrame could not be processed")
 
     if final_opts.get("reorder") and final_opts.get("load_column_control"):
         for i, _ in enumerate(columns_defs):
@@ -368,7 +383,7 @@ def render(
     if format_negatives is False:
         pass
     elif format_negatives is True:
-        cols_with_neg = get_cols_with_neg(df)
+        cols_with_neg = get_cols_with_neg(df_prepared)
         for idx in cols_with_neg:
             columns_defs[idx]["render"] = RENDER_NUM_FUNC
             columns_defs[idx]["type"] = "num-html"
@@ -399,11 +414,11 @@ def render(
     if final_opts.get("add_expand_btn") is False:
         template_vars["add_expand_btn"] = json.dumps(False)
 
-    if final_opts.get("scroll_x") is False:
-        template_vars["scroll_x"] = json.dumps(False)
-
-    if final_opts.get("fixed_header") is False:
-        template_vars["fixed_header"] = json.dumps(False)
+    # template_vars["fixed_header"] = json.dumps(bool(final_opts.get("fixed_header")))
+    template_vars["scroll_x"] = json.dumps(bool(final_opts.get("scroll_x", True)))
+    template_vars["scroll_y"] = json.dumps(final_opts.get("scroll_y", "70vh"))
+    template_vars["scroll_collapse"] = json.dumps(
+        bool(final_opts.get("scroll_collapse", True)))
 
     if final_opts.pop("unique_id", None):
         unique_id = f'"id_{uuid.uuid4().hex}"'  # use uuid for all instances
@@ -417,8 +432,6 @@ def render(
     # Configure optional template features
     if not display_logo:
         template_vars["datatables_logo"] = ""
-    if not load_column_control:
-        template_vars["column_control"] = ""
 
     if js_opts:
         assert isinstance(js_opts, dict)
@@ -513,7 +526,7 @@ def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
     return min_content
 
 
-def get_sample_df(df_type="pandas", size=20):
+def get_sample_df(df_type="pandas", size=50):
     """
     Generates a sample DataFrame with diverse data types for testing.
     """
@@ -616,9 +629,16 @@ def render_nb(df, iframe=True, height=500, **kwargs):
         to_file=None,
         **kwargs,
     )
-    html_content = html_content.replace('"', "&quot;")
-    # html_content = escape(html_content, quote=True)
-    iframe_content = f'<!--silence iframe --><iframe srcdoc="{html_content}" style="width:100%;height:{height}px;border:none;"></iframe>'
+    # Escape quotes only for the srcdoc attribute (the browser decodes them
+    # back when parsing the iframe). Replacing quotes in the raw HTML breaks
+    # the <script> blocks, where character references are not decoded.
+    iframe_content = None
+    if iframe:
+        escaped = html_content.replace('"', "&quot;")
+        iframe_content = (
+            f'<!--silence iframe --><iframe srcdoc="{escaped}" '
+            f'style="width:100%;height:{height}px;border:none;"></iframe>'
+        )
 
     try:
         import IPython.display as disp
@@ -633,7 +653,7 @@ def render_nb(df, iframe=True, height=500, **kwargs):
             import marimo
 
             # print("marimo")
-            return marimo.Html(iframe_content)
+            return marimo.Html(iframe_content if iframe else html_content)
         except ImportError:
             print("Notebook expected.")
             return None

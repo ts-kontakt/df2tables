@@ -106,7 +106,7 @@ def process_pl(
     columns_defs = _generate_column_defs_pl(df_prepared, load_column_control,
                                             dropdown_select_threshold)
     search_columns = _get_search_cols(df_prepared)
-    return data_arrays, columns_defs, search_columns
+    return data_arrays, columns_defs, search_columns, df_prepared
 
 
 if __name__ == "__main__":
