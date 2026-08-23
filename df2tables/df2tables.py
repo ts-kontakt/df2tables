@@ -244,21 +244,31 @@ def _render_html_template(template_path, template_vars):
         template_vars: Dictionary of template variables
 
     Returns:
-        str: Rendered HTML content, or empty string on error
+        str: Rendered HTML content
+
+    Raises:
+        FileNotFoundError: If the template file does not exist
+        RuntimeError: If the template cannot be rendered
     """
     try:
         with open(template_path, encoding="utf-8") as f:
             template_str = f.read()
-        return comnt.render(template_str, template_vars)
     except FileNotFoundError:
-        print(f"Template file not found at: {template_path}")
-        print(
+        raise FileNotFoundError(
+            f"Template file not found at: {template_path}. "
             "Ensure the template exists or provide a custom path via 'templ_path' parameter."
-        )
-        return ""
+        ) from None
     except Exception as e:
-        print(f"Error rendering template: {type(e).__name__}: {e}")
-        return ""
+        raise RuntimeError(
+            f"Error reading template: {type(e).__name__}: {e}"
+        ) from e
+
+    try:
+        return comnt.render(template_str, template_vars)
+    except Exception as e:
+        raise RuntimeError(
+            f"Error rendering template: {type(e).__name__}: {e}"
+        ) from e
 
 
 DEPRECATED_ARGS = {
@@ -314,7 +324,12 @@ def render(
 
     Returns:
         str or None: File path if to_file is specified, HTML string if to_file is None,
-                     or None on error
+                     or None on file write errors
+
+    Raises:
+        ValueError: If precision is invalid or the DataFrame type is unsupported
+        FileNotFoundError: If the HTML template cannot be found
+        RuntimeError: If the HTML template cannot be read or rendered
     """
     final_opts = DEFAULT_RENDER_OPTS.copy()
     passed_deprecated = {}
@@ -420,14 +435,21 @@ def render(
     template_vars["scroll_collapse"] = json.dumps(
         bool(final_opts.get("scroll_collapse", True)))
 
+    # table_id / default_table_class must be honored even without unique_id
+    table_id = final_opts.get("table_id", DEFAULT_RENDER_OPTS["table_id"])
     if final_opts.pop("unique_id", None):
-        unique_id = f'"id_{uuid.uuid4().hex}"'  # use uuid for all instances
-        template_vars["table_id"] = unique_id
-        template_vars["table_markup"] = (
-            f'<table id={unique_id} class="display compact hover order-column"></table>'
-        )
-    else:
-        pass
+        table_id = f"id_{uuid.uuid4().hex}"  # use uuid for all instances
+    template_vars["table_id"] = json.dumps(table_id)
+    template_vars["table_markup"] = html_tag(
+        "table",
+        attrs={
+            "id": table_id,
+            "style": "width:100%;",
+            "class": final_opts.get(
+                "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
+            ),
+        },
+    )
 
     # Configure optional template features
     if not display_logo:
@@ -442,25 +464,27 @@ def render(
     if buttons:
         assert isinstance(buttons, list)
         # template_vars["buttons"] = BUTTONS_URLS
-        butt_obj = {"buttons": []}
-        for button in buttons:
-            butt_obj["buttons"].append(button)
+        butt_obj = {"buttons": list(buttons)}
 
         # button_loc = {"top2Start": [butt_obj], "topEnd": [[butt_obj],"pageLength"]}
         button_loc = {"topStart": ["pageLength", [butt_obj]]}
 
-        if "layout" in js_opts:
-            js_opts["layout"].update(button_loc)
-        else:
-            js_opts["layout"] = button_loc
+        # Merge into a copy so the caller's js_opts dict is not mutated
+        layout = dict(js_opts.get("layout") or {})
+        layout.update(button_loc)
+        js_opts = {**js_opts, "layout": layout}
 
     template_vars["js_opts"] = json.dumps(js_opts)
 
-    html_content = _render_html_template(templ_path, template_vars)
-    # html_content = minify(html_content)
-
     if not to_file:
-        return html_content
+        return _render_html_template(templ_path, template_vars)
+
+    try:
+        html_content = _render_html_template(templ_path, template_vars)
+        # html_content = minify(html_content)
+    except Exception as e:
+        print(f"Failed to render table: {type(e).__name__}: {e}")
+        return None
 
     try:
         with open(to_file, "w", encoding="utf-8") as outfile:
@@ -623,7 +647,9 @@ def render_nb(df, iframe=True, height=500, **kwargs):
     Render a DataFrame as interactive HTML within a notebook environment.
     """
     if "render_opts" in kwargs:
-        kwargs["render_opts"].update({"unique_id": True, "display_logo": False})
+        render_opts = dict(kwargs.get("render_opts") or {})
+        render_opts.update({"unique_id": True, "display_logo": False})
+        kwargs["render_opts"] = render_opts
     html_content = render(
         df,
         to_file=None,
