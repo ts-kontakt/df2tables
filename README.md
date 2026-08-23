@@ -41,7 +41,9 @@ The column control feature provides dropdown filters for categorical data and se
 The simplest function call with default arguments is:
 
 ```python
-df2tables.render(df, to_file='df.html')
+import df2tables as df2t
+
+df2t.render(df, to_file='df.html')
 ```
 
 ## Installation
@@ -53,8 +55,8 @@ pip install df2tables
 ### Sample DataFrame
 
 ```python
-#render sample DataFrame
-html_string = df2t.render_sample_df(to_file="sample_table.html")
+# Render a sample DataFrame; returns the output file path (and opens it in the browser)
+output_path = df2t.render_sample_df(to_file="sample_table.html")
 ```
 ### Rendering in notebook
 ```python
@@ -75,7 +77,7 @@ df2t.render(
     startfile: bool = True,
     precision: int = 2,
     format_negatives: Union[bool, List[str], Tuple[str], Set[str]] = False,
-    buttons: Optional[List[str]] = None,
+    buttons: Union[bool, List[str]] = False,
     render_opts: Optional[dict] = None,
     js_opts: Optional[dict] = None,
     templ_path: str = TEMPLATE_PATH,
@@ -94,7 +96,7 @@ df2t.render(
   - `False`: No special formatting (default)
   - `True`: Auto-detect and format all numeric columns containing negative values
   - `List/Tuple/Set[str]`: Format only specified column names (spaces in column names should be replaced with underscores)
-- `buttons`: List of DataTables button types to add to the toolbar (e.g., `['copy', 'csv', 'excel', 'pdf']`). Requires DataTables Buttons extension (default: None)
+- `buttons`: List of DataTables button types to add to the toolbar (e.g., `['copy', 'csv', 'excel', 'pdf']`). Requires DataTables Buttons extension (default: False)
 - `render_opts`: Dictionary of additional rendering configuration options (see below for available options)
 - `js_opts`: Dictionary of [DataTables configuration options](https://datatables.net/reference/option/) to customize table behavior (e.g., pagination, scrolling, layout, language) (default: None)
 - `templ_path`: Path to custom HTML template (uses default if not specified)
@@ -105,22 +107,27 @@ df2t.render(
 - `locale_fmt` (bool): Enable locale-based number formatting (default: False)
 - `reorder` (bool): Enable column reordering functionality. Requires `load_column_control=True` (default: False)
 - `dropdown_select_threshold` (int): Maximum unique values for dropdown filters. Columns with more unique values will use text input instead (default: 9)
-- `table_id` (str): HTML ID for the table element (default: "pd_datatab")
-- `unique_id` (bool): Generate unique UUID-based table ID for multiple tables on one page (default: False)
-- `default_table_class` (str): CSS classes for table styling (default: "display compact hover order-column")
+- `table_id` (str): HTML ID for the table element in the generated page (default: "pd_datatab")
+- `unique_id` (bool): Generate unique UUID-based table ID for multiple tables on one page (default: False; takes precedence over `table_id`)
+- `default_table_class` (str): CSS classes for the table element in the generated page (default: "display compact hover order-column")
 - `add_expand_btn` (bool): Add expand/collapse button for row details (default: True)
 - `display_logo` (bool): Display DataTables logo (default: False)
+- `scroll_x` (bool): Enable horizontal scrolling (default: True)
+- `scroll_y` (str | None): Vertical scrolling height, e.g. `"70vh"`; set to `None` to disable (default: "70vh")
+- `scroll_collapse` (bool): Collapse the container height when there are fewer rows than `scroll_y` (default: True)
 
 **Returns:**
 
 - File path (str) if `to_file` is specified and file is successfully written
 - HTML string if `to_file=None`
-- `None` on error (file write failure or invalid input)
+- `None` if writing to `to_file` fails or the template cannot be read/rendered (the error is printed)
 
 **Raises:**
 
-- `ValueError`: If `precision` is not a non-negative integer, DataFrame is empty/unsupported type, or DataFrame cannot be processed
+- `ValueError`: If `precision` is not a non-negative integer, the DataFrame type is unsupported, or the DataFrame cannot be processed
 - `UserWarning`: For unknown keyword arguments passed to the function
+- `FileNotFoundError`: If `templ_path` does not exist and `to_file=None` (with `to_file` set, the error is printed and `None` is returned)
+- `RuntimeError`: If the template cannot be read/rendered and `to_file=None` (with `to_file` set, the error is printed and `None` is returned)
 
 
 ---
@@ -130,7 +137,8 @@ df2t.render(
 ```python
 df2t.render_inline(
     df: pd.DataFrame | pl.DataFrame,
-    table_attrs: Dict = None,
+    table_attrs: Optional[Dict] = None,
+    add_scripts: bool = False,
     **kwargs
 ) -> str
 ```
@@ -142,9 +150,9 @@ This function is designed for integration with web applications and has the foll
 - Returns only the `<table>` markup and the associated JavaScript
 - Excludes `<html>`, `<head>`, and `<body>` tags
 - Useful for pages with multiple tables, as you can assign unique IDs via the `table_attrs` dictionary (e.g., `{'id': 'my-unique-table'}`)
-- **Important**: This function does not include jQuery or DataTables library dependencies. You must include them manually in your host HTML page for the table to function correctly
+- By default (`add_scripts=False`), the snippet does not include jQuery or DataTables library dependencies. You must include them manually in your host HTML page for the table to function correctly. Set `add_scripts=True` to prepend the CDN `<link>`/`<script>` assets to the returned snippet.
 
-The **`table_attrs`** argument accepts a dictionary of HTML table attributes, such as an ID or CSS class. This is especially useful for multiple tables on a single page (each must have a different ID).
+The **`table_attrs`** argument accepts a dictionary of HTML table attributes, such as an ID or CSS class. This is especially useful for multiple tables on a single page (each must have a different ID). For `render_inline`, use `table_attrs` instead of the `render_opts['table_id']` option.
 
 **Note:** Some arguments from `render()` are not applicable here, such as `title`, `display_logo`, or `startfile`, because the returned HTML contains only the table element and its initialization script.
 
