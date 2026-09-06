@@ -165,6 +165,56 @@ table.dataTable td {
     justify-content: center;
     }
 
+    /*[ajax_css*/
+    /* --- AJAX loader (render_ajax) - stripped from render() output ---.
+       Literal colors on purpose: this block is also inlined into
+       render_ajax() fragments, where the page-level :root vars do not exist. */
+    .dt-ajax-btn {
+        background: #0A2540;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 18px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity .15s ease-in-out;
+    }
+    .dt-ajax-btn:hover { opacity: .85; }
+    .dt-ajax-btn:disabled { opacity: .5; cursor: default; }
+    .dt-ajax-status {
+        margin-top: .75rem;
+        font-size: 13px;
+        color: gray;
+    }
+    .dt-ajax-error { color: #b00020; font-weight: 600; }
+    .dt-ajax-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #e9e9e9;
+        border-top-color: #0A2540;
+        border-radius: 50%;
+        animation: dt-ajax-spin .8s linear infinite;
+        vertical-align: -2px;
+        margin-right: 6px;
+    }
+    @keyframes dt-ajax-spin { to { transform: rotate(360deg); } }
+    /* Subtle "data is loading" animation (autoload mode) + table fade-in */
+    .dt-ajax-status.dt-ajax-loading {
+        animation: dt-ajax-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes dt-ajax-pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: .45; }
+    }
+    .dt-ajax-fadein { animation: dt-ajax-fadein .4s ease; }
+    @keyframes dt-ajax-fadein {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    .dt-ajax-retry { margin-top: .5rem; }
+    /*ajax_css]*/
+
     /* Column Control */
     div.dtcc-title {
     font-weight: 600;
@@ -499,7 +549,7 @@ table.dataTable td {
                 DataTable.type("num", "render", DataTable.render.number(thousands, decimal, render_precision));
             }
 
-            const clearButton = '<button id="custom_clear1" class="custom_btn"><span class="icon"><svg id="custom_clear2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
+            const clearButton = '<button id="cc_clear_' + TABLE_ID + '" class="custom_btn"><span class="icon"><svg id="cc_clear2_' + TABLE_ID + '" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
 
             let table_opts = {
                 data: tab_data,
@@ -526,13 +576,140 @@ table.dataTable td {
 
             if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
                 deepMerge(table_opts, custom_config_opts);
+            }
 
-                // Warn before building table when paging is disabled on large datasets
-                if (table_opts.paging === false && tab_data.length > _PAGING_WARN_LIMIT) {
+            /*[ajax_js*/
+            // ----- AJAX mode (render_ajax): rows are fetched at runtime -----
+            // render() strips this region (and the small one in the ready
+            // handler below) from its output; render_ajax() keeps it alive
+            // and bakes the endpoint configuration into the inner tags.
+            const data_url = /*[data_url*/ null /*data_url]*/ ;
+            const BTN_LABEL = /*[button_label*/ "Load data" /*button_label]*/ ;
+            const AUTOLOAD = /*[autoload*/ false /*autoload]*/ ;
+            const FETCH_OPTS = /*[fetch_opts*/ {} /*fetch_opts]*/ ;
+            // same-origin credentials by default; FETCH_OPTS may override anything
+            const fetch_init = Object.assign({ credentials: "same-origin" }, FETCH_OPTS);
+            const SPINNER = '<span class="dt-ajax-spinner"></span>';
+            let _table = null;    // DataTable instance once built
+            let _loaded = false;  // first load done?
+            let _loading = false; // fetch in progress?
+
+            const normalize_payload = function(payload) {
+                // bare array of rows, or {"data": [...]} (DataTables ajax style)
+                if (Array.isArray(payload)) return payload;
+                if (payload && Array.isArray(payload.data)) return payload.data;
+                throw new Error("Unsupported data format: expected an array of rows or an object with a 'data' array");
+            };
+
+            // state: "" (idle/done) | "loading" (pulsing) | "error"
+            const set_status = function(html, state) {
+                const el = document.getElementById("dt_ajax_status_" + TABLE_ID);
+                if (!el) return;
+                el.innerHTML = html;
+                el.className = "dt-ajax-status" +
+                    (state === "error" ? " dt-ajax-error" : "") +
+                    (state === "loading" ? " dt-ajax-loading" : "");
+            };
+
+            const load_data = function() {
+                if (_loading) return; // guard: no double fetch (double click, retries)
+                _loading = true;
+                const btn = document.getElementById("dt_ajax_btn_" + TABLE_ID);
+                if (btn) btn.disabled = true;
+                set_status(SPINNER + "Loading data&#8230;", "loading");
+
+                fetch(data_url, fetch_init)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error("HTTP " + response.status + " " + response.statusText);
+                        }
+                        // text() first: on JSON.parse errors retry with bare
+                        // NaN/Infinity tokens replaced by null (endpoints that
+                        // do not sanitize non-finite floats).
+                        return response.text();
+                    })
+                    .then(text => {
+                        let payload;
+                        try {
+                            payload = JSON.parse(text);
+                        } catch (e) {
+                            payload = JSON.parse(text.replace(/\bNaN\b|\bInfinity\b/g, "null"));
+                        }
+                        const rows = normalize_payload(payload);
+                        if (_loaded && _table) {
+                            // reload: swap the rows in the existing table
+                            _table.clear();
+                            _table.rows.add(rows);
+                            _table.draw();
+                        } else {
+                            _table = build_table(rows);
+                            _loaded = true;
+                            const tbl = document.getElementById(TABLE_ID);
+                            if (tbl) tbl.classList.add("dt-ajax-fadein");
+                        }
+                        set_status("Loaded <strong>" + rows.length.toLocaleString() + "</strong> rows.", "");
+                        if (btn) btn.style.display = "none";
+                    })
+                    .catch(err => {
+                        console.error("[df2tables] ajax load failed:", err);
+                        set_status("Failed to load data: " + err.message, "error");
+                        if (btn) {
+                            btn.disabled = false; // click the button to retry
+                        } else {
+                            // autoload mode has no button - add a retry one (only once)
+                            const bar = document.getElementById("dt_ajax_bar_" + TABLE_ID);
+                            if (bar && !bar.querySelector(".dt-ajax-retry")) {
+                                const retry = document.createElement("button");
+                                retry.className = "dt-ajax-btn dt-ajax-retry";
+                                retry.textContent = "Retry";
+                                retry.addEventListener("click", load_data);
+                                bar.appendChild(retry);
+                            }
+                        }
+                    })
+                    .finally(() => {
+                        _loading = false;
+                    });
+            };
+
+            const wire_async_loader = function() {
+                // The loader bar is anchored to the table element itself, so it
+                // works both in the full page and in inline fragments.
+                const table_el = document.getElementById(TABLE_ID);
+                if (!table_el) return;
+                const bar = document.createElement("div");
+                bar.id = "dt_ajax_bar_" + TABLE_ID;
+                bar.style.cssText = "margin: .25rem 0 .5rem;";
+                if (AUTOLOAD) {
+                    // no button: a subtle pulsing "Loading data..." indicator
+                    bar.innerHTML =
+                        '<div id="dt_ajax_status_' + TABLE_ID + '" class="dt-ajax-status"></div>';
+                } else {
+                    bar.innerHTML =
+                        '<button id="dt_ajax_btn_' + TABLE_ID + '" class="dt-ajax-btn">' + BTN_LABEL + "</button>" +
+                        '<div id="dt_ajax_status_' + TABLE_ID + '" class="dt-ajax-status"></div>';
+                }
+                table_el.insertAdjacentElement("beforebegin", bar);
+                if (!AUTOLOAD) {
+                    document.getElementById("dt_ajax_btn_" + TABLE_ID)
+                        .addEventListener("click", load_data);
+                } else {
+                    load_data();
+                }
+            };
+            /*ajax_js]*/
+
+            const build_table = function(rows) {
+                const data = rows || tab_data;
+
+                // Warn before building the table when paging is disabled on a
+                // large dataset (covers embedded AND fetched rows).
+                if (custom_config_opts && Object.keys(custom_config_opts).length > 0 &&
+                    table_opts.paging === false && data.length > _PAGING_WARN_LIMIT) {
                     const warn = document.createElement("div");
                     warn.innerHTML =
                         "<strong>⚠ Performance warning</strong> — " +
-                        "<strong>" + tab_data.length.toLocaleString() + "</strong> rows loaded into the DOM at once. " +
+                        "<strong>" + data.length.toLocaleString() + "</strong> rows loaded into the DOM at once. " +
                         "Sorting, filtering and scrolling will all be slower. " +
                         "<br><em>Tip: drop <code>paging: false</code> and set " +
                         "<code>pageLength: 1000</code> instead — only 1000 rows in the DOM at a time, " +
@@ -540,13 +717,15 @@ table.dataTable td {
                         "<button onclick=\"this.parentNode.remove()\" " +
                         "style=\"float:right;border:none;background:none;cursor:pointer;font-size:1rem\">&#x2715;</button>";
                     warn.style.cssText = "background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #e6a817;color:#664d03;font-size:.875rem;margin-bottom:.5rem;padding:.5rem .75rem;position:relative";
-                    document.getElementById("tabcnt").insertAdjacentElement("beforebegin", warn);
+                    const host = document.getElementById(TABLE_ID);
+                    if (host) host.insertAdjacentElement("beforebegin", warn);
                 }
-            }
 
-            const build_table = function() {
-                let table = $("#" + TABLE_ID).DataTable(table_opts);
-                $(document).on("click", "#custom_clear1", e => {
+                // Copy the opts so DataTables does not mutate our table_opts
+                // (DT removes `data` from the object it is given).
+                const init_opts = Object.assign({}, table_opts, { data: data });
+                let table = $("#" + TABLE_ID).DataTable(init_opts);
+                $(document).on("click", "#cc_clear_" + TABLE_ID, e => {
                     e.preventDefault();
                     try {
                         table.search("").columns().columnControl.searchClear().draw();
@@ -555,9 +734,18 @@ table.dataTable td {
                         table.search("").draw();
                     }
                 });
+                return table;
             };
 
             $(document).ready(function() {
+                /*[ajax_js*/
+                if (data_url) {
+                    // AJAX mode: wire the loader; the table is built after the
+                    // first fetch completes.
+                    wire_async_loader();
+                    return;
+                }
+                /*ajax_js]*/
                 build_table();
             });
         })();

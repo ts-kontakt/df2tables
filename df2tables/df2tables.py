@@ -5,9 +5,19 @@ df2tables: Convert pandas/polars DataFrames to interactive HTML DataTables.
 This module provides functionality to render DataFrames as interactive HTML tables
 using the DataTables JavaScript library, with support for filtering, sorting, and searching.
 
+render()       - rows embedded in the HTML
+render_ajax()  - rows fetched from an endpoint (see to_js_array());
+                 returns an inline fragment like render_inline() by
+                 default, full_page=True for a standalone page. Both are
+                 generated from the SINGLE template via comnt regions.
+render_inline()/render_nb() - embedding helpers
+
+Errors policy: rendering problems (bad arguments, missing templates, unwritable
+output paths) raise instead of being printed and swallowed.
 """
 
 import json
+import math
 import os
 import subprocess
 import sys
@@ -15,14 +25,29 @@ import uuid
 import warnings
 from html import escape
 from pathlib import Path
-from re import sub
 
 try:
     from importlib import resources
 
-    TEMPLATE_PATH = resources.files("df2tables") / "datatable_templ.html"
-except (ImportError, AttributeError):
-    TEMPLATE_PATH = Path(__file__).parent / "datatable_templ.html"
+    def _template_path(name):
+        """Resolve a bundled template. Prefers importlib.resources (correct for
+        zip/namespace installs); falls back to __file__ when the package is
+        used directly from a source directory."""
+        try:
+            return resources.files("df2tables") / name
+        except (ImportError, AttributeError, NotImplementedError):
+            return Path(__file__).parent / name
+except ImportError:  # pragma: no cover - very old Python
+    def _template_path(name):
+        return Path(__file__).parent / name
+
+
+# Single source of truth: BOTH render() and render_ajax() generate their
+# output from this ONE template. The AJAX loader lives inside comnt regions
+# (ajax_js / ajax_css + the data_url/button_label/autoload/fetch_opts tags)
+# that render_ajax() configures and render() strips - no second template
+# file to maintain.
+TEMPLATE_PATH = _template_path("datatable_templ.html")
 
 try:
     from . import comnt
@@ -36,6 +61,8 @@ __all__ = [
     "TEMPLATE_PATH",
     "render",
     "render_inline",
+    "render_ajax",
+    "to_js_array",
     "render_sample_df",
     "get_sample_df",
     "load_datatables",
@@ -57,6 +84,9 @@ def html_tag(tag, content="", attrs=None, self_closing=False):
 def open_file(filename):
     """
     Opens a file with the default application in a cross-platform way.
+
+    Purely cosmetic side effect: failures are reported but never propagate,
+    so a missing system opener cannot break an otherwise successful render.
     """
     filepath = str(filename)
     try:
@@ -96,13 +126,6 @@ class DataJSONEncoder(json.JSONEncoder):
             return escape(repr(obj))
 
 
-def minify(html):
-    html = html.replace("\n", "")
-    html = sub("\\s{2,}", " ", html)
-    html = html.replace("> <", "><")
-    return html
-
-
 def _prepare_dataframe(df, precision):
     """
     Prepares a DataFrame for rendering without modifying the original.
@@ -111,7 +134,6 @@ def _prepare_dataframe(df, precision):
 
     # Convert Series to DataFrame with proper naming
     if isinstance(df, pd.Series):
-        print("Converting Series to DataFrame...")
         df = df.to_frame(name=df.name or "value").reset_index()
 
     # Work on a copy to avoid modifying the original
@@ -133,7 +155,9 @@ def _prepare_dataframe(df, precision):
             seen[col] = seen.get(col, 0) + 1
             new_cols.append(col if seen[col] == 1 else f"{col}_{seen[col] - 1}")
         df_copy.columns = new_cols
-        print(f"Duplicate column names found; renamed to: {new_cols}")
+        warnings.warn(
+            f"Duplicate column names found; renamed to: {new_cols}", UserWarning
+        )
 
     # Round numeric columns to specified precision
     float_cols = df_copy.select_dtypes(include="number").columns
@@ -141,7 +165,7 @@ def _prepare_dataframe(df, precision):
         try:
             df_copy[float_cols] = df_copy[float_cols].round(precision)
         except ValueError as e:
-            print(f"Could not round numeric columns: {e}")
+            warnings.warn(f"Could not round numeric columns: {e}", UserWarning)
 
     # Convert unhashable types (lists, dicts) to string representation
     for col in df_copy.columns:
@@ -221,34 +245,80 @@ def _generate_column_defs(df, load_column_control, dropdown_select_threshold):
     return columns
 
 
-def process_pandas(df, precision, load_column_control, dropdown_select_threshold):
+def process_pandas(
+    df,
+    precision,
+    load_column_control,
+    dropdown_select_threshold,
+    include_data=True,
+):
     """
     Complete processing pipeline for pandas DataFrames.
+
+    Args:
+        include_data: If False, skip the (potentially expensive) conversion of
+            all rows to a Python list. Only the prepared DataFrame and column
+            definitions are returned. Used by render_ajax(), where the rows
+            are fetched later via AJAX.
     """
     df_prepared = _prepare_dataframe(df, precision)
     columns_defs = _generate_column_defs(
         df_prepared, load_column_control, dropdown_select_threshold
     )
-    data_arrays = df_prepared.values.tolist()
-    search_columns = list(df_prepared.select_dtypes(include=["object", "string"]).columns)
+    data_arrays = df_prepared.values.tolist() if include_data else []
+    # "category" is included for parity with the polars backend.
+    search_columns = list(
+        df_prepared.select_dtypes(include=["object", "string", "category"]).columns
+    )
 
     return data_arrays, columns_defs, search_columns, df_prepared
+
+
+def _load_tablepl():
+    try:
+        from . import tablepl
+    except ImportError:
+        import tablepl
+    return tablepl
+
+
+def _strict_json_safe(obj):
+    """
+    Recursively replaces non-finite floats (NaN, inf, -inf) with None.
+
+    Python's json.dumps emits bare NaN/Infinity tokens by default - legal
+    inside a <script> block, but invalid strict JSON: JSON.parse /
+    fetch().json() reject it. Using null everywhere keeps the payload of
+    render() and to_js_array() in one dialect. numpy floats (np.float64)
+    are covered - they subclass float.
+    """
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, (list, tuple)):
+        return [_strict_json_safe(v) for v in obj]
+    if isinstance(obj, dict):
+        return {k: _strict_json_safe(v) for k, v in obj.items()}
+    return obj
+
+
+def _columns_to_json(columns_defs):
+    """Serializes column definitions, injecting the JS render_num function reference."""
+    return json.dumps(
+        columns_defs, separators=(",", ":"), ensure_ascii=False
+    ).replace(f'"{RENDER_NUM_FUNC}"', RENDER_NUM_FUNC.strip("#"))
 
 
 def _render_html_template(template_path, template_vars):
     """
     Loads and renders the HTML template with provided variables.
 
-    Args:
-        template_path: Path to the HTML template file
-        template_vars: Dictionary of template variables
-
-    Returns:
-        str: Rendered HTML content
+    comnt.render() runs in strict mode: a template_vars key without a
+    matching tag in the template raises instead of silently leaving the
+    placeholder comment block in the produced HTML.
 
     Raises:
         FileNotFoundError: If the template file does not exist
-        RuntimeError: If the template cannot be rendered
+        RuntimeError: If the template cannot be read or rendered
     """
     try:
         with open(template_path, encoding="utf-8") as f:
@@ -264,11 +334,27 @@ def _render_html_template(template_path, template_vars):
         ) from e
 
     try:
-        return comnt.render(template_str, template_vars)
+        return comnt.render(template_str, template_vars, strict=True)
     except Exception as e:
         raise RuntimeError(
             f"Error rendering template: {type(e).__name__}: {e}"
         ) from e
+
+
+def _strip_ajax_blocks(html):
+    """
+    render() does not use the AJAX loader - remove its regions (ajax_js /
+    ajax_css) from the output. render_ajax() generates its variant from the
+    SAME template by simply leaving those regions in place, so there is no
+    second template file to maintain. Custom templates without the regions
+    are fine: a missing tag is not an error here.
+    """
+    for tag in ("ajax_js", "ajax_css"):
+        try:
+            html = comnt.render(html, {tag: ""}, strict=True)
+        except comnt.NotFoundError:
+            pass
+    return html
 
 
 DEPRECATED_ARGS = {
@@ -288,10 +374,107 @@ DEFAULT_RENDER_OPTS = {
     "add_expand_btn": True,
     "display_logo": False,
     "scroll_x": True,
-    # "fixed_header": False,
     "scroll_y": "70vh",
     "scroll_collapse": True,
 }
+
+_UNSET = object()
+
+
+def _resolve_render_opts(render_opts, kwargs, func_name):
+    """
+    Single place where render()/render_ajax() options are resolved.
+
+    - deprecated kwargs (DEPRECATED_ARGS) are merged into the options dict
+      with a DeprecationWarning - and actually take effect downstream
+      (this used to be silently broken in render_ajax());
+    - 'num_html' (renamed to 'format_negatives') is returned via the sentinel;
+    - unknown kwargs produce a UserWarning and are ignored;
+    - render_opts (if a dict) override everything.
+
+    Returns:
+        (final_opts, num_html): num_html is _UNSET when the kwarg was absent.
+    """
+    final_opts = DEFAULT_RENDER_OPTS.copy()
+    num_html = _UNSET
+    deprecated = {}
+
+    for key, value in kwargs.items():
+        if key == "num_html":
+            num_html = value
+        elif key in DEPRECATED_ARGS:
+            deprecated[key] = value
+        else:
+            warnings.warn(
+                f"Unknown argument '{key}' passed to {func_name}; ignored.",
+                UserWarning,
+                stacklevel=3,
+            )
+
+    if num_html is not _UNSET:
+        warnings.warn(
+            "'num_html' was renamed into 'format_negatives'.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+    for key in deprecated:
+        warnings.warn(
+            f"Passing arguments like [{key}] directly to {func_name} is deprecated "
+            "and will be removed in a future version. "
+            "Please use the 'render_opts' dictionary instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+    final_opts.update(deprecated)
+
+    if render_opts is not None:
+        if not isinstance(render_opts, dict):
+            raise TypeError(
+                f"render_opts must be a dict or None, got {type(render_opts).__name__}"
+            )
+        final_opts.update(render_opts)
+
+    return final_opts, num_html
+
+
+def _process_dataframe(df, precision, final_opts, include_data=True):
+    """
+    Dispatches to the pandas or polars preparation pipeline.
+
+    Args:
+        include_data: If False, rows are NOT converted to Python lists
+            (used by render_ajax(), which never embeds rows in the HTML).
+
+    Returns:
+        tuple: (data_arrays, columns_defs, search_columns, df_prepared)
+
+    Raises:
+        ValueError: On invalid precision or unsupported DataFrame type.
+    """
+    if not isinstance(precision, int) or precision < 0:
+        raise ValueError(f"precision must be an integer, got: {type(precision).__name__}")
+
+    mod_name = type(df).__module__
+    if "pandas" in mod_name:
+        return process_pandas(
+            df,
+            precision,
+            final_opts["load_column_control"],
+            final_opts["dropdown_select_threshold"],
+            include_data=include_data,
+        )
+    if "polars" in mod_name:
+        return _load_tablepl().process_pl(
+            df,
+            precision,
+            final_opts["load_column_control"],
+            final_opts["dropdown_select_threshold"],
+            include_data=include_data,
+        )
+    raise ValueError(
+        f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
+        "Expected pandas or polars DataFrame."
+    )
 
 
 def get_cols_with_neg(df):
@@ -304,6 +487,124 @@ def get_cols_with_neg(df):
             # ValueError: ambiguous truth value (e.g. duplicate column names)
             pass
     return col_indexes
+
+
+def _apply_format_negatives(df_prepared, columns_defs, format_negatives):
+    """
+    Marks columns for the num-html negative-number renderer.
+
+    format_negatives=True auto-detects columns containing negative values;
+    a list/tuple/set is matched against the ORIGINAL column names (and, as a
+    convenience, against the displayed title). Matching original names avoids
+    the old title-mangling collisions ("a b" vs "a_b").
+
+    Raises:
+        TypeError: If format_negatives is not False/None/True or a collection.
+    """
+    if format_negatives is False or format_negatives is None:
+        return
+    if format_negatives is True:
+        for idx in get_cols_with_neg(df_prepared):
+            columns_defs[idx]["render"] = RENDER_NUM_FUNC
+            columns_defs[idx]["type"] = "num-html"
+        return
+    if isinstance(format_negatives, (list, tuple, set)):
+        wanted = {str(name) for name in format_negatives}
+        for idx, col in enumerate(df_prepared.columns):
+            if col in wanted or columns_defs[idx]["title"] in wanted:
+                columns_defs[idx]["render"] = RENDER_NUM_FUNC
+                columns_defs[idx]["type"] = "num-html"
+        return
+    raise TypeError(
+        "format_negatives must be False, True, or a list/tuple/set of column "
+        f"names, got: {type(format_negatives).__name__}"
+    )
+
+
+def _base_template_vars(final_opts, title, precision):
+    """
+    Template vars shared by every template (regular and ajax): title, table
+    identity/markup, scrolling, precision, locale formatting and logo.
+    """
+    table_id = final_opts.get("table_id") or DEFAULT_RENDER_OPTS["table_id"]
+    if final_opts.get("unique_id"):
+        table_id = f"id_{uuid.uuid4().hex}"
+
+    template_vars = {
+        "title": str(title),
+        "table_id": json.dumps(table_id),
+        "table_markup": html_tag(
+            "table",
+            attrs={
+                "id": table_id,
+                "style": "width:100%;",
+                "class": final_opts.get(
+                    "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
+                ),
+            },
+        ),
+        "scroll_x": json.dumps(bool(final_opts.get("scroll_x", True))),
+        "scroll_y": json.dumps(final_opts.get("scroll_y", "70vh")),
+        "scroll_collapse": json.dumps(bool(final_opts.get("scroll_collapse", True))),
+    }
+
+    if precision != 2:
+        template_vars["precision"] = json.dumps(int(precision))
+    if final_opts.get("locale_fmt", False):
+        template_vars["locale_fmt"] = json.dumps(True)
+    if not final_opts.get("display_logo", False):
+        template_vars["datatables_logo"] = ""
+    if final_opts.get("add_expand_btn") is False:
+        template_vars["add_expand_btn"] = json.dumps(False)
+    return template_vars
+
+
+def _merge_buttons(js_opts, buttons):
+    """
+    Validates js_opts/buttons (raising TypeError instead of assert, which
+    would vanish under python -O) and merges DataTables buttons into the
+    layout. Returns a copy - the caller's js_opts is never mutated.
+    """
+    if js_opts is None:
+        js_opts = {}
+    if not isinstance(js_opts, dict):
+        raise TypeError(f"js_opts must be a dict or None, got {type(js_opts).__name__}")
+    if any(not isinstance(key, str) for key in js_opts):
+        raise TypeError("js_opts keys must be strings")
+
+    if not buttons:
+        return js_opts
+    if not isinstance(buttons, (list, tuple)):
+        raise TypeError(
+            f"buttons must be a list of DataTables button names, got {type(buttons).__name__}"
+        )
+
+    butt_obj = {"buttons": list(buttons)}
+    layout = dict(js_opts.get("layout") or {})
+    layout.update({"topStart": ["pageLength", [butt_obj]]})
+    return {**js_opts, "layout": layout}
+
+
+def _emit(html_content, to_file, startfile):
+    """
+    Writes the rendered HTML to to_file (or returns it as a string when
+    to_file is empty). Write errors propagate to the caller instead of being
+    printed and swallowed.
+    """
+    if not to_file:
+        return html_content
+    with open(to_file, "w", encoding="utf-8") as outfile:
+        outfile.write(html_content)
+    print(f"Successfully created DataTable at: {to_file}")
+    if startfile:
+        open_file(to_file)
+    return to_file
+
+
+def _apply_reorder(final_opts, columns_defs):
+    if final_opts.get("reorder") and final_opts.get("load_column_control"):
+        for col_def in columns_defs:
+            col_def.setdefault("columnControl", []).append("reorder")
 
 
 def render(
@@ -322,204 +623,73 @@ def render(
     """
     Renders a pandas or polars DataFrame as an interactive HTML DataTable.
 
+    Args:
+        to_file: output file path; if None/empty, the HTML string is returned
+        title: page/table title (may contain HTML, e.g. "Example <b>df</b>")
+        startfile: open the generated file in the browser after writing
+        precision: rounding precision for float columns
+        format_negatives: False / True (auto-detect) / list of original column names
+        buttons: list of DataTables buttons, e.g. ["colvis", "copy", "excel"]
+        render_opts: dict overriding DEFAULT_RENDER_OPTS
+        js_opts: dict of extra DataTables options, deep-merged into table opts
+        templ_path: path to the HTML template
+
     Returns:
-        str or None: File path if to_file is specified, HTML string if to_file is None,
-                     or None on file write errors
+        str: file path if to_file is set, otherwise the HTML string
 
     Raises:
         ValueError: If precision is invalid or the DataFrame type is unsupported
+        TypeError: If render_opts/js_opts/buttons/format_negatives have wrong types
         FileNotFoundError: If the HTML template cannot be found
         RuntimeError: If the HTML template cannot be read or rendered
+        OSError: If the output file cannot be written
     """
-    final_opts = DEFAULT_RENDER_OPTS.copy()
-    passed_deprecated = {}
+    final_opts, num_html = _resolve_render_opts(render_opts, kwargs, "render()")
+    if num_html is not _UNSET:
+        format_negatives = num_html
 
-    for key, value in kwargs.items():
-        if key in DEPRECATED_ARGS:
-            passed_deprecated[key] = value
-        else:
-            # Optional: Warn about unexpected arguments
-            warnings.warn(f"Unknown argument '{key}' passed to render().", UserWarning)
-
-    # Update defaults with any deprecated args found
-    if passed_deprecated:
-        final_opts.update(passed_deprecated)
-        arg_names = ", ".join(passed_deprecated.keys())
-        # warnings.warn(
-        print(
-            f"\nPassing arguments like [{arg_names}] directly is deprecated and "
-            "will be removed in a future version. "
-            "Please use the 'render_opts' dictionary instead.",
-        )
-
-    # The new 'render_opts' dictionary (if provided) OVERRIDES everything else
-    if render_opts:
-        final_opts.update(render_opts)
-    load_column_control = final_opts["load_column_control"]
-    display_logo = final_opts["display_logo"]
-    dropdown_select_threshold = final_opts["dropdown_select_threshold"]
-
-    # Validate input parameters
-    if not isinstance(precision, int) or precision < 0:
-        raise ValueError(f"precision must be an integer, got: {type(precision).__name__}")
-
-    # Determine DataFrame type and process accordingly
-    mod_name = type(df).__module__
-    data_arrays, columns_defs, search_columns, df_prepared = None, None, None, None
-    if "pandas" in mod_name:
-        data_arrays, columns_defs, search_columns, df_prepared = process_pandas(
-            df, precision, load_column_control, dropdown_select_threshold
-        )
-    elif "polars" in mod_name:
-        try:
-            from . import tablepl
-        except ImportError:
-            import tablepl
-        data_arrays, columns_defs, search_columns, df_prepared = tablepl.process_pl(
-            df, precision, load_column_control, dropdown_select_threshold
-        )
-    else:
-        raise ValueError(
-            f"Unsupported DataFrame type: {type(df).__name__} from module {mod_name}. "
-            "Expected pandas or polars DataFrame."
-        )
-
-    if data_arrays is None:
-        raise ValueError("DataFrame could not be processed")
-
-    if final_opts.get("reorder") and final_opts.get("load_column_control"):
-        for i, _ in enumerate(columns_defs):
-            columns_defs[i]["columnControl"].append("reorder")
-
-    if "num_html" in kwargs:
-        print("'num_html' was renamed into 'format_negatives'")
-        format_negatives = kwargs["num_html"]
-
-    if format_negatives is False:
-        pass
-    elif format_negatives is True:
-        cols_with_neg = get_cols_with_neg(df_prepared)
-        for idx in cols_with_neg:
-            columns_defs[idx]["render"] = RENDER_NUM_FUNC
-            columns_defs[idx]["type"] = "num-html"
-    elif isinstance(format_negatives, (list, tuple, set)):
-        for idx, _ in enumerate(columns_defs):
-            if columns_defs[idx]["title"].replace(" ", "_") in format_negatives:
-                columns_defs[idx]["render"] = RENDER_NUM_FUNC
-                columns_defs[idx]["type"] = "num-html"
-
-    # Prepare JSON data with special handling for JS function references
-    columns_json = json.dumps(
-        columns_defs, separators=(",", ":"), ensure_ascii=False
-    ).replace(f'"{RENDER_NUM_FUNC}"', RENDER_NUM_FUNC.strip("#"))
-
-    template_vars = {
-        "title": str(title),
-        "tab_data": json.dumps(data_arrays, cls=DataJSONEncoder, separators=(",", ":")),
-        "tab_columns": columns_json,
-        "search_columns": json.dumps(search_columns, separators=(",", ":")),
-    }
-
-    if precision != 2:
-        template_vars["precision"] = json.dumps(int(precision))
-
-    if final_opts.pop("locale_fmt", None):
-        template_vars["locale_fmt"] = json.dumps(True)
-
-    if final_opts.get("add_expand_btn") is False:
-        template_vars["add_expand_btn"] = json.dumps(False)
-
-    # template_vars["fixed_header"] = json.dumps(bool(final_opts.get("fixed_header")))
-    template_vars["scroll_x"] = json.dumps(bool(final_opts.get("scroll_x", True)))
-    template_vars["scroll_y"] = json.dumps(final_opts.get("scroll_y", "70vh"))
-    template_vars["scroll_collapse"] = json.dumps(
-        bool(final_opts.get("scroll_collapse", True)))
-
-    # table_id / default_table_class must be honored even without unique_id
-    table_id = final_opts.get("table_id", DEFAULT_RENDER_OPTS["table_id"])
-    if final_opts.pop("unique_id", None):
-        table_id = f"id_{uuid.uuid4().hex}"  # use uuid for all instances
-    template_vars["table_id"] = json.dumps(table_id)
-    template_vars["table_markup"] = html_tag(
-        "table",
-        attrs={
-            "id": table_id,
-            "style": "width:100%;",
-            "class": final_opts.get(
-                "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
-            ),
-        },
+    data_arrays, columns_defs, search_columns, df_prepared = _process_dataframe(
+        df, precision, final_opts
     )
+    _apply_reorder(final_opts, columns_defs)
+    _apply_format_negatives(df_prepared, columns_defs, format_negatives)
 
-    # Configure optional template features
-    if not display_logo:
-        template_vars["datatables_logo"] = ""
+    template_vars = _base_template_vars(final_opts, title, precision)
+    template_vars["tab_data"] = json.dumps(
+        _strict_json_safe(data_arrays), cls=DataJSONEncoder, separators=(",", ":")
+    )
+    template_vars["tab_columns"] = _columns_to_json(columns_defs)
+    template_vars["search_columns"] = json.dumps(search_columns, separators=(",", ":"))
 
-    if js_opts:
-        assert isinstance(js_opts, dict)
-        assert all(isinstance(key, str) for key in js_opts), "Not all keys are strings"
-    else:
-        js_opts = {}
+    template_vars["js_opts"] = json.dumps(_merge_buttons(js_opts, buttons))
 
-    if buttons:
-        assert isinstance(buttons, list)
-        # template_vars["buttons"] = BUTTONS_URLS
-        butt_obj = {"buttons": list(buttons)}
-
-        # button_loc = {"top2Start": [butt_obj], "topEnd": [[butt_obj],"pageLength"]}
-        button_loc = {"topStart": ["pageLength", [butt_obj]]}
-
-        # Merge into a copy so the caller's js_opts dict is not mutated
-        layout = dict(js_opts.get("layout") or {})
-        layout.update(button_loc)
-        js_opts = {**js_opts, "layout": layout}
-
-    template_vars["js_opts"] = json.dumps(js_opts)
-
-    if not to_file:
-        return _render_html_template(templ_path, template_vars)
-
-    try:
-        html_content = _render_html_template(templ_path, template_vars)
-        # html_content = minify(html_content)
-    except Exception as e:
-        print(f"Failed to render table: {type(e).__name__}: {e}")
-        return None
-
-    try:
-        with open(to_file, "w", encoding="utf-8") as outfile:
-            outfile.write(html_content)
-        print(f"Successfully created DataTable at: {to_file}")
-        if startfile:
-            open_file(to_file)
-        return to_file
-    except IOError as e:
-        print(f"Failed to write file '{to_file}': {e}")
-        return None
-    except Exception as e:
-        print(f"Unexpected error writing file: {type(e).__name__}: {e}")
-        return None
+    html_content = _render_html_template(templ_path, template_vars)
+    # render() never uses the AJAX loader - strip its regions from the
+    # output (render_ajax() generates its variant from the same template).
+    html_content = _strip_ajax_blocks(html_content)
+    return _emit(html_content, to_file, startfile)
 
 
 def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
     """
     Renders a DataFrame as inline HTML for embedding in existing pages.
 
+    Each call generates a unique table id by default, so several tables can
+    be embedded on one page without DOM id collisions (pass an explicit
+    'id' via table_attrs to control it yourself).
+
     Args:
         df: DataFrame to render (pandas or polars)
         table_attrs: Custom HTML attributes for the table element (default: None)
+        add_scripts: include the DataTables <script> dependencies
         **kwargs: Additional arguments passed to render() (except 'to_file' and 'title')
 
     Returns:
         str: Minimal HTML content for embedding (table + scripts)
 
-    Warning:
-        'to_file' and 'title' arguments are ignored with warnings
-
     Example:
         >>> html = render_inline(df, table_attrs={'id': 'my-table', 'class': 'custom'})
     """
-    # Validate arguments and warn about ignored parameters
     if kwargs.pop("to_file", None):
         warnings.warn(
             "'to_file' argument is ignored in render_inline - output is always returned as string"
@@ -532,10 +702,12 @@ def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
     # Always render without file output
     html = render(df, to_file=None, **kwargs)
     attrs = {
-        "id": DEFAULT_RENDER_OPTS["table_id"],
         "class": DEFAULT_RENDER_OPTS["default_table_class"],
         **(table_attrs or {}),
     }
+    if not attrs.get("id"):
+        # Unique per call: two tables on one page must not share a DOM id.
+        attrs["id"] = f"dt_{uuid.uuid4().hex[:8]}"
 
     base_table = html_tag("table", attrs=attrs)
 
@@ -548,6 +720,201 @@ def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
 
     min_content = base_table + comnt.get_tag_content("min_content", html)
     return min_content
+
+
+def to_js_array(df, precision=2, raw=False):
+    """
+    Converts a pandas/polars DataFrame to a JavaScript array-of-arrays
+    (strict JSON), exactly in the shape consumed by pages rendered with
+    render_ajax().
+
+    Intended for Flask/FastAPI endpoints serving data to those pages.
+    NaN/inf cells are emitted as null, so the output always passes
+    JSON.parse.
+
+    Args:
+        df: pandas or polars DataFrame
+        precision: rounding precision for float columns (same as render())
+        raw: if True, returns the plain (already NaN-cleaned) Python list
+             instead of a JSON string - safe to pass to Flask's jsonify()
+
+    Returns:
+        str or list: JSON string like '[[1,"a",3.5],[2,"b",4.1]]' (default),
+                     or the underlying list of lists when raw=True
+
+    Example (Flask):
+        @app.route("/api/table")
+        def api_table():
+            return Response(to_js_array(df), mimetype="application/json")
+    """
+    data_arrays, _, _, _ = _process_dataframe(df, precision, DEFAULT_RENDER_OPTS.copy())
+    data_arrays = _strict_json_safe(data_arrays)
+    if raw:
+        return data_arrays
+    # allow_nan=False: a non-finite value that slipped through the cleaner
+    # (e.g. Decimal("NaN")) raises loudly instead of shipping invalid JSON.
+    return json.dumps(
+        data_arrays, cls=DataJSONEncoder, separators=(",", ":"), allow_nan=False
+    )
+
+
+def render_ajax(
+    df,
+    data_url,
+    to_file=None,
+    title="",
+    startfile=True,
+    precision=2,
+    format_negatives=False,
+    buttons=False,
+    button_label="Load data",
+    autoload=False,
+    fetch_opts=None,
+    render_opts=None,
+    js_opts=None,
+    templ_path=TEMPLATE_PATH,
+    full_page=False,
+    add_scripts=False,
+    table_attrs=None,
+    **kwargs,
+):
+    """
+    Renders a DataFrame as a DataTable whose rows are fetched at runtime
+    from `data_url` (Fetch API) - generated from the SAME template as
+    render(): the AJAX loader lives in comnt regions (ajax_js / ajax_css)
+    that render() strips from its output and render_ajax() keeps and
+    configures. No separate AJAX template is maintained on disk.
+
+    By default returns an INLINE FRAGMENT, exactly like render_inline():
+    the loader <style>, the <table> skeleton and the initialization
+    <script>, ready to embed into an existing page next to other content.
+    Several fragments may live on one page (each call gets a unique table
+    id unless you pin one). With full_page=True a complete standalone
+    HTML document is produced instead.
+
+    With autoload=False a button labelled `button_label` fetches the rows
+    on click; with autoload=True there is no button at all - a subtle
+    pulsing "Loading data..." indicator shows while the rows arrive (a
+    Retry button appears only on failure).
+
+    The endpoint at `data_url` should return JSON in one of two shapes:
+        - a bare array of rows:   [[1, "a", 3.5], [2, "b", 4.1]]
+        - an object with 'data':  {"data": [[1, "a", 3.5], ...]}
+    Use to_js_array(df) (or the plain list from to_js_array(df, raw=True))
+    to produce this payload.
+
+    Args:
+        df: pandas or polars DataFrame (used to derive columns and options)
+        data_url: URL of the endpoint returning the row data as JSON
+        to_file: output file path; if None/empty, the HTML is returned
+        title: page title (full_page mode only; ignored in fragments)
+        startfile: open the generated file in the browser after writing
+        precision: rounding precision for float columns
+        format_negatives: False / True / list of column names (see render())
+        buttons: list of DataTables buttons, e.g. ["colvis", "copy", "excel"]
+        button_label: label of the load-data button (autoload=False only)
+        autoload: fetch data immediately, without any button
+        fetch_opts: dict merged into the fetch() options (defaults to
+                    {"credentials": "same-origin"})
+        render_opts: dict overriding DEFAULT_RENDER_OPTS (see render())
+        js_opts: dict of extra DataTables options, deep-merged into table opts
+        templ_path: HTML template - must contain the same comnt tags as
+                    datatable_templ.html, including the ajax_js / ajax_css
+                    regions and the data_url / button_label / autoload /
+                    fetch_opts tags
+        full_page: return a complete standalone HTML document instead of
+                   the inline fragment
+        add_scripts: prepend the DataTables CDN <link>/<script> block
+                     (inline mode only; the host page usually provides it)
+        table_attrs: extra HTML attributes for the <table> element
+                     (inline mode only)
+
+    Returns:
+        str: file path if to_file is set, otherwise the fragment / document
+
+    Raises:
+        TypeError: If data_url is not a string, or opts/buttons have wrong types
+        ValueError: If precision is invalid or the DataFrame type is unsupported
+        FileNotFoundError / RuntimeError: template problems
+        OSError: If the output file cannot be written
+
+    Example (Flask):
+        @app.route("/")
+        def index():
+            frag = render_ajax(df, "/api/table")   # inline fragment
+            return f"<html><body>{frag}</body></html>"
+
+        @app.route("/api/table")
+        def api_table():
+            return Response(to_js_array(df), mimetype="application/json")
+    """
+    final_opts, num_html = _resolve_render_opts(render_opts, kwargs, "render_ajax()")
+    if num_html is not _UNSET:
+        format_negatives = num_html
+
+    if not isinstance(data_url, (str, Path)):
+        raise TypeError(f"data_url must be a str, got {type(data_url).__name__}")
+
+    if not full_page:
+        # Inline fragment (default, render_inline-style): every embedded
+        # table needs its own DOM id unless the caller pinned one.
+        explicit_id = (render_opts or {}).get("table_id") or (table_attrs or {}).get("id")
+        if explicit_id:
+            final_opts["table_id"] = explicit_id
+            final_opts["unique_id"] = False
+        else:
+            final_opts["unique_id"] = True
+
+    # Rows are intentionally NOT materialized here - only columns/search
+    # definitions are baked into the page (include_data=False).
+    _, columns_defs, search_columns, df_prepared = _process_dataframe(
+        df, precision, final_opts, include_data=False
+    )
+    _apply_reorder(final_opts, columns_defs)
+    _apply_format_negatives(df_prepared, columns_defs, format_negatives)
+
+    template_vars = _base_template_vars(final_opts, title, precision)
+    template_vars["tab_data"] = "[]"  # rows arrive via fetch(), never embedded
+    template_vars["tab_columns"] = _columns_to_json(columns_defs)
+    template_vars["search_columns"] = json.dumps(search_columns, separators=(",", ":"))
+    template_vars["data_url"] = json.dumps(str(data_url), ensure_ascii=False)
+    template_vars["button_label"] = json.dumps(str(button_label), ensure_ascii=False)
+    template_vars["autoload"] = json.dumps(bool(autoload))
+    template_vars["fetch_opts"] = json.dumps(fetch_opts or {}, separators=(",", ":"))
+    template_vars["js_opts"] = json.dumps(_merge_buttons(js_opts, buttons))
+
+    # NOTE: ajax_js / ajax_css are deliberately NOT passed - those regions
+    # of the single template stay alive here (render() strips them instead).
+    html_content = _render_html_template(templ_path, template_vars)
+
+    if full_page:
+        return _emit(html_content, to_file, startfile)
+
+    # --- inline fragment (default), in the spirit of render_inline() ---
+    # The loader CSS travels with the fragment (self-contained look), the
+    # DataTables assets are the host page's job unless add_scripts=True.
+    table_id = json.loads(template_vars["table_id"])
+    fragment = "<style>" + comnt.get_tag_content("ajax_css", html_content) + "</style>"
+    if add_scripts:
+        fragment += comnt.get_tag_content("scripts", html_content)
+    attrs = {
+        "style": "width:100%;",
+        "class": final_opts.get(
+            "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
+        ),
+        **(table_attrs or {}),
+        "id": table_id,
+    }
+    fragment += html_tag("table", attrs=attrs)
+    fragment += comnt.get_tag_content("min_content", html_content)
+
+    if to_file:
+        warnings.warn(
+            "to_file writes the inline fragment; pass full_page=True for a "
+            "standalone page."
+        )
+        return _emit(fragment, to_file, startfile)
+    return fragment
 
 
 def get_sample_df(df_type="pandas", size=50):
@@ -678,7 +1045,6 @@ def render_nb(df, iframe=True, height=500, **kwargs):
         try:
             import marimo
 
-            # print("marimo")
             return marimo.Html(iframe_content if iframe else html_content)
         except ImportError:
             print("Notebook expected.")
@@ -703,7 +1069,7 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         to_file=to_file,
         title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
         precision=3,
-        format_negatives=["measurement"],  # , "value"],  #"revenue",
+        format_negatives=["measurement"],
         buttons=["colvis", "copy", "excel"],
         render_opts={
             "locale_fmt": False,

@@ -100,9 +100,16 @@ def process_pl(
     precision=2,
     load_column_control=True,
     dropdown_select_threshold=9,
+    include_data=True,
 ):
+    """
+    Prepares a polars df and builds the JSON-ready pieces for the templates.
+
+    include_data=False skips converting all rows to Python lists - used by
+    render_ajax(), where rows are fetched later via AJAX.
+    """
     df_prepared = _prepare_dataframe_pl(df, precision)
-    data_arrays = _get_data_arrays(df_prepared)
+    data_arrays = _get_data_arrays(df_prepared) if include_data else []
     columns_defs = _generate_column_defs_pl(df_prepared, load_column_control,
                                             dropdown_select_threshold)
     search_columns = _get_search_cols(df_prepared)
