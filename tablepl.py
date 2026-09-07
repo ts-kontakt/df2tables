@@ -1,0 +1,120 @@
+import polars as pl
+from polars.selectors import numeric
+
+RENDER_NUM_FUNC = "#render_num"
+
+
+def _prepare_dataframe_pl(df, precision):
+    """
+    Prepares a Polars df for rendering. Handles Series,
+    data type conversions, and complex types without modifying the original
+    df.
+    """
+    if isinstance(df, pl.Series):
+        df = df.to_frame(name=df.name or "value")
+
+    df_copy = df.clone()
+    df_copy = df_copy.with_columns(
+        numeric().round(precision),
+        pl.col(pl.List, pl.Struct, pl.Object).map_elements(
+            # escape does not allow html rendering
+            str,
+            return_dtype=pl.String,
+            # lambda x : escape(repr(x)), return_dtype=pl.String
+        ),
+    )
+    return df_copy
+
+
+def _generate_column_defs_pl(df, load_column_control=True, dropdown_select_threshold=9):
+    """
+    Generates the column definitions list for DataTables from a Polars df.
+
+    - Float columns always get a text search filter (ignore threshold).
+    - Integer columns use the dropdown_select_threshold (dropdown if few unique values).
+    - Other non‑float columns also use the dropdown_select_threshold.
+    """
+    columns = []
+    for col_name in df.columns:
+        # Get column dtype to decide filter behaviour
+        col_dtype = df[col_name].dtype
+
+        # Determine if column is float or integer (strict check)
+        is_float = col_dtype.is_float()
+        is_integer = col_dtype.is_integer()
+
+        # Count unique values if needed (not for float)
+        n_unique = None
+        if not is_float:
+            try:
+                n_unique = df[col_name].n_unique()
+            except Exception:
+                n_unique = dropdown_select_threshold  # fallback
+
+        col_cleaned = col_name.replace("_", " ")
+
+        if is_float:
+            # Float columns always get text search, no dropdown
+            col_def = {"title": col_cleaned, "searchable": True}
+            if load_column_control:
+                col_def["columnControl"] = ["order", ["title", "search"]]
+        elif is_integer:
+            # Integer columns: use threshold for dropdown vs text search
+            if n_unique < dropdown_select_threshold:
+                col_def = {"title": col_cleaned}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "searchList"]]
+            else:
+                col_def = {"title": col_cleaned, "searchable": True}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "search"]]
+        else:
+            # Other non‑float columns (strings, categoricals, booleans, etc.)
+            # behave like the original logic: threshold applies
+            if n_unique < dropdown_select_threshold:
+                col_def = {"title": col_cleaned}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "searchList"]]
+            else:
+                col_def = {"title": col_cleaned, "searchable": True}
+                if load_column_control:
+                    col_def["columnControl"] = ["order", ["title", "search"]]
+
+        col_def["orderable"] = True
+        columns.append(col_def)
+
+    return columns
+
+
+def _get_data_arrays(df):
+    return [list(row) for row in df.rows()]
+
+
+def _get_search_cols(df):
+    str_cols = df.select(pl.col(pl.Utf8, pl.Categorical)).columns
+    return list(str_cols)
+
+
+def process_pl(
+    df,
+    precision=2,
+    load_column_control=True,
+    dropdown_select_threshold=9,
+    include_data=True,
+):
+    """
+    Prepares a polars df and builds the JSON-ready pieces for the templates.
+
+    include_data=False skips converting all rows to Python lists - used by
+    render_ajax(), where rows are fetched later via AJAX.
+    """
+    df_prepared = _prepare_dataframe_pl(df, precision)
+    data_arrays = _get_data_arrays(df_prepared) if include_data else []
+    columns_defs = _generate_column_defs_pl(df_prepared, load_column_control,
+                                            dropdown_select_threshold)
+    search_columns = _get_search_cols(df_prepared)
+    return data_arrays, columns_defs, search_columns, df_prepared
+
+
+if __name__ == "__main__":
+    pass

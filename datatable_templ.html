@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!--[head-->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DataFrame</title>
+    <style>
+    :root {
+    --table-border: 1px solid rgba(34, 36, 38, 0.1);
+    --border-color: #e9e9e9;
+    --text-color-gray: gray;
+    --button-color: #0A2540;
+    --selected-bg: #e0f0ff;
+    --selected-border: #66b2ff;
+    }
+
+  body {
+    font-family:
+        -apple-system, BlinkMacSystemFont,
+        "Segoe UI Variable Text", "Segoe UI",
+        Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    text-rendering: optimizeLegibility;
+}
+
+table.dataTable {
+    border-spacing: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+}
+
+table.dataTable thead th {
+    font-family:
+        -apple-system, BlinkMacSystemFont,
+        "Segoe UI Variable Text", "Segoe UI",
+        Arial, sans-serif;
+    font-weight: 600;
+}
+
+table.dataTable tbody td {
+    font-weight: 400;
+}
+
+table.dataTable th,
+table.dataTable td {
+    padding: 3px 6px; /* Zmniejsza wcięcia tekstu. Dostosuj te wartości według uznania */
+    vertical-align: middle;
+}
+
+
+    input,
+    button,
+    select {
+    font: inherit;
+    color: inherit;
+    }
+
+    /* DataTables Wrapper */
+    .dataTables_wrapper {
+    margin-top: 2rem;
+    }
+
+    /* Table Structure */
+    table.dataTable {
+    border: var(--table-border);
+    margin: 0;
+    }
+
+    table.dataTable thead td {
+    border-style: solid;
+    border-color: var(--border-color);
+    border-width: 0 1px 0 0;
+    padding: 0 0 0 0.4rem !important;
+    }
+
+    table.dataTable td {
+    border-left: var(--table-border);
+    font-size: 13px;
+    max-width: 20rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+
+    table.dataTable td span {
+    float: right;
+    }
+
+    td.dt-nowrap {
+    white-space: nowrap;
+    }
+
+    /* Header Styling */
+    span.dt-column-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: wrap;
+    }
+
+    /* Input Styling */
+    .dt-input {
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+    }
+
+    input.dt-input:not(:placeholder-shown) {
+    background-color: var(--selected-bg) !important;
+    border-color: var(--selected-border) !important;
+    font-weight: bold;
+    }
+
+    input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: auto;
+    appearance: auto;
+    cursor: pointer;
+    }
+
+    /* Info Section */
+    .dt-info {
+    padding: 0;
+    font-size: 13px;
+    color: var(--text-color-gray);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    }
+
+    /* Layout */
+    div.dt-container div.dt-layout-row {
+    margin: 0.5em 0 0 0;
+    }
+
+    /* Buttons */
+    div.dt-buttons {
+    margin-right: 1rem;
+    }
+
+    button.dt-button {
+    padding: 0.2rem 0.5rem !important;
+    }
+
+    .custom_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f7f7f7;
+    cursor: pointer;
+    }
+
+    .custom_btn:hover {
+    background: #e9e9e9;
+    }
+
+    .custom_btn .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    }
+
+    /*[ajax_css*/
+    /* --- AJAX loader (render_ajax) - stripped from render() output ---.
+       Literal colors on purpose: this block is also inlined into
+       render_ajax() fragments, where the page-level :root vars do not exist. */
+    .dt-ajax-btn {
+        background: #0A2540;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 18px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: opacity .15s ease-in-out;
+    }
+    .dt-ajax-btn:hover { opacity: .85; }
+    .dt-ajax-btn:disabled { opacity: .5; cursor: default; }
+    .dt-ajax-status {
+        margin-top: .75rem;
+        font-size: 13px;
+        color: gray;
+    }
+    .dt-ajax-error { color: #b00020; font-weight: 600; }
+    .dt-ajax-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #e9e9e9;
+        border-top-color: #0A2540;
+        border-radius: 50%;
+        animation: dt-ajax-spin .8s linear infinite;
+        vertical-align: -2px;
+        margin-right: 6px;
+    }
+    @keyframes dt-ajax-spin { to { transform: rotate(360deg); } }
+    /* Subtle "data is loading" animation (autoload mode) + table fade-in */
+    .dt-ajax-status.dt-ajax-loading {
+        animation: dt-ajax-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes dt-ajax-pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: .45; }
+    }
+    .dt-ajax-fadein { animation: dt-ajax-fadein .4s ease; }
+    @keyframes dt-ajax-fadein {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    .dt-ajax-retry { margin-top: .5rem; }
+    /*ajax_css]*/
+
+    /* Column Control */
+    div.dtcc-title {
+    font-weight: 600;
+    }
+
+    table.dataTable span.dtcc span.dtcc-button-icon {
+    color: var(--button-color);
+    --dt-row-selected-stripe-alpha: 0.99;
+    }
+
+    /* Logo */
+    .dtlogo {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: auto;
+    margin: 1em;
+    opacity: 0.5;
+    display: block;
+    z-index: 2;
+    }
+
+    /* Custom Elements */
+    custom.select {
+    color: black;
+    max-width: 15.5em;
+    margin: 1px;
+    }
+
+    /* Allow the shadow pseudo-element to render outside the fixed cell */
+    table.dataTable td.dtfc-fixed-start,
+    table.dataTable th.dtfc-fixed-start,
+    table.dataTable td.dtfc-fixed-left,
+    table.dataTable th.dtfc-fixed-left {
+    overflow: visible !important;
+    }
+
+    #tabcnt {
+    width: fit-content; /* IMPORTANT WHEN #tabcnt table.dataTable width: fit-content ; */
+    max-width: 100%;
+    margin-left: 0;
+    }
+
+    #tabcnt .dt-container {
+    width: 100%;
+    }
+
+    #tabcnt .dt-layout-table {
+    width: 100%;
+    }
+
+    #tabcnt table.dataTable {
+     /* width : fit-content ; problematic?  - y scrollbar is missing */
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    }
+    </style><!--[scripts-->
+    <!-- CSS -->
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css"><!-- Extensions CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
+    <!-- jQuery -->
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script><!-- DataTables core -->
+
+    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script><!-- Buttons -->
+
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script><!-- Column / table extensions -->
+
+    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
+    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
+    <!--scripts]-->
+    <!--head]-->
+</head>
+<body>
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-md-1-1" style="padding:0px;">
+            <div id="loading" style="display:none;">
+                Loading…
+            </div>
+            <div id="tabcnt">
+                <p><!--[title-->
+                 <!--title]--></p><!--[table_markup-->
+                <table id="pd_datatab" style="width:100%;" class="display compact hover order-column"></table><!--table_markup]-->
+            </div>
+        </div><!--[datatables_logo-->
+        <figure class="dtlogo">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Datatables_logo_square.png" width="20" style="display: block; margin-left: auto; margin-right: auto">
+            <figcaption style="text-align: center">
+                <small style="font-size: 9px"><a target="blank" href="https://datatables.net">DataTables.net</a></small>
+            </figcaption>
+        </figure><!--datatables_logo]-->
+    </div><!--[min_content-->
+    <script type="text/javascript">
+        /* global DataTable, $, jQuery  */
+        (function() {
+            /* https://datatables.net/extensions/columncontrol/examples/styling/alignmentHeaderOnly.html */
+            DataTable.type("num", "className", "dt-body-right");
+            DataTable.type("num-fmt", "className", "dt-body-right");
+            DataTable.type("date", "className", "dt-body-right");
+
+            if (DataTable.ColumnControl) {
+                const active_funnel = '<svg id="funnel_menu_a" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-icon lucide-funnel"> <rect x="-4" y="-4" width="32" height="32" fill="#0B57D0"/> <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/> </svg> ';
+                const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" id="funnel_menu_p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
+
+                DataTable.ColumnControl.icons["menu"] = inactive_funnel;
+                DataTable.ColumnControl.Button.prototype._checkActive = function() {
+                    var curr_icon = this._dom.icon.innerHTML || "";
+                    if (this._s.active === true || Object.values(this._s.activeList).includes(true)) {
+                        this._dom.state.innerHTML = DataTable.ColumnControl.icons.tick;
+                        this._dom.button.classList.add("dtcc-button_active");
+                        if (curr_icon.includes("funnel_menu")) {
+                            this._dom.icon.innerHTML = active_funnel;
+                        }
+                    } else {
+                        this._dom.state.innerHTML = "";
+                        this._dom.button.classList.remove("dtcc-button_active");
+                        if (curr_icon.includes("funnel_menu")) {
+                            this._dom.icon.innerHTML = inactive_funnel;
+                        }
+                    }
+                    return this;
+                };
+            }
+
+            function deepMerge(target, source) {
+                for (const key in source) {
+                    if (source[key] && typeof source[key] === "object" && !Array.isArray(source[key])) {
+                        if (!target[key] || typeof target[key] !== "object" || Array.isArray(target[key])) {
+                            target[key] = {};
+                        }
+                        deepMerge(target[key], source[key]);
+                    } else {
+                        target[key] = source[key];
+                    }
+                }
+                return target;
+            }
+
+            function _anyNumber(a) {
+                var reg = /[+-]?((\d+(\.\d*)?)|\.\d+)([eE][+-]?[0-9]+)?/;
+                if (typeof a === "string") {
+                    a = a.replaceAll(",", ".").replace(/ /g, "").match(reg);
+                    a = a !== null ? parseFloat(a[0]) : Number.POSITIVE_INFINITY;
+                }
+                return a;
+            }
+
+            jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+                "num-html-pre": function(a) {
+                    var x = String(a).replace(/<[\s\S]*?>/g, "");
+                    return parseFloat(_anyNumber(x));
+                },
+                "num-html-asc": function(a, b) {
+                    return a < b ? -1 : a > b ? 1 : 0;
+                },
+                "num-html-desc": function(a, b) {
+                    return a < b ? 1 : a > b ? -1 : 0;
+                }
+            });
+
+            const add_expand_btn = /*[add_expand_btn*/ true /*add_expand_btn]*/ ;
+
+            function search_info() {
+                if (search_columns && search_columns.length > 0) {
+                    const searchableColumns = search_columns;
+                    let search_msg = "[" + searchableColumns.map(col => `'${col}'`).join(", ") + "]";
+                    if (search_msg.length > 150) {
+                        search_msg = search_msg.slice(0, 150) + "...";
+                    }
+                    const searchNote = $("<span>").css({
+                        margin: "0.5rem",
+                        "font-size": "0.7rem",
+                        "font-style": "italic",
+                        display: "inline-flex",
+                        color: "#667"
+                    }).text(search_msg);
+                    $("#" + TABLE_ID + "_wrapper .dt-search input.dt-input").after(searchNote);
+                }
+
+                if (add_expand_btn) {
+                    var dn_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>';
+                    var up_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>';
+                    var expand_butt = '<button class="custom_btn" type="button" title="Show tools"><span class="icon">' + dn_icon + "</span></button>";
+                    var tools = $("<span>").css({
+                        display: "flex",
+                        right: "",
+                        "font-size": "11px"
+                    }).html(expand_butt);
+
+                    $("#" + TABLE_ID + "_info").before(tools);
+                    $("#" + TABLE_ID + "_wrapper").find("div.dt-buttons").hide();
+                    $("#" + TABLE_ID + "_wrapper").find("div.dt-length").hide();
+
+                    tools.on("click", function(event) {
+                        event.preventDefault();
+                        $("#" + TABLE_ID + "_wrapper").find("div.dt-buttons").toggle();
+                        $("#" + TABLE_ID + "_wrapper").find("div.dt-length").toggle();
+                        var iconSpan = $(this).find(".icon");
+                        var button = $(this).find(".custom_btn");
+                        var isDown = iconSpan.html().indexOf("chevron-down") !== -1;
+                        if (isDown) {
+                            iconSpan.html(up_icon);
+                            button.attr("title", "Hide tools");
+                        } else {
+                            iconSpan.html(dn_icon);
+                            button.attr("title", "Show tools");
+                        }
+                    });
+                }
+            }
+
+            const render_precision = /*[precision*/ 2 /*precision]*/ ;
+            var thousands = "";
+            var decimal = ".";
+
+            const render_num = (data, type) => {
+                if (data == null) {
+                    return null;
+                }
+                const number = DataTable.render.number(thousands, decimal, render_precision).display(data);
+                if (type !== "display") return data;
+                const color = data < 0 ? "red" : "black";
+                return '<span style="color:' + color + '">' + number + "</span>";
+            };
+
+            const tab_data =
+                /*[tab_data*/
+                [
+                    ["2025-09-11T08:27:01.989794", .09, "F", -.987, -2e3, "Premium", 222222222.987, -1, "Emergency"],
+                    ["Lorem ipsum dolor sit amet, consectetur adipiscing", -.59, "A", 1, -1, "Premium", "0.123", 1, "Medium priority"],
+                    ["<b>Integer</b> laoreet odio et.", .2, "D", -9, 2, "Budget", "1", 2, "Low priority"],
+                    [null, -.49, "F", 4, 3, "Budget", "0", 1, "Low priority"],
+                    [" class 'datetime.datetime' ", -.18, "A", 2, 4, "Standard", "1", 1, "Emergency"],
+                    [" NA ", -.8, "A", 3, 5, "Premium", "0", 0, "High priority"],
+                    [
+                        ["C", {
+                            a: 1
+                        }], -.52, "B", "1111.11", "7e4", "Budget", "0", 0, "High priority"
+                    ]
+                ]
+            /*tab_data]*/
+            ;
+
+            const columns =
+                /*[tab_columns*/
+                [{
+                    title: "col 1a",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]]
+                }, {
+                    title: "col 2",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]],
+                    render: render_num,
+                    type: "num-html"
+                }, {
+                    title: "C 3",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col4",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]],
+                    render: render_num,
+                    type: "num-html"
+                }, {
+                    title: "col5",
+                    searchable: true,
+                    orderable: true,
+                    columnControl: ["order", ["title", "search"]],
+                    render: render_num,
+                    type: "num-html"
+                }, {
+                    title: "col6",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col7",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col8",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }, {
+                    title: "col9",
+                    orderable: true,
+                    columnControl: ["order", ["title", "searchList"]]
+                }]
+            /*tab_columns]*/
+            ;
+
+            const search_columns =
+                /*[search_columns*/
+                ["col_1a", "C 3", "col6", "col7", "col9"]
+            /*search_columns]*/
+            ;
+            const search_val = search_columns && search_columns.length > 0 ? "search" : null;
+
+            const custom_layout = {
+                top1Start: "info",
+                top2Start: search_val,
+                topStart: ["pageLength", {
+                    buttons: ["colvis", "copy"]
+                }],
+                topEnd: null,
+                bottomStart: "paging",
+                bottomEnd: null,
+                bottom: null
+            };
+
+            const TABLE_ID = /*[table_id*/ "pd_datatab"
+            /*table_id]*/
+            ;
+            const locale_fmt = /*[locale_fmt*/ false /*locale_fmt]*/ ;
+
+            if (locale_fmt) {
+                DataTable.type("date", "render", DataTable.render.date());
+                DataTable.type("num", "render", DataTable.render.number());
+            } else {
+                DataTable.type("num", "render", DataTable.render.number(thousands, decimal, render_precision));
+            }
+
+            const clearButton = '<button id="cc_clear_' + TABLE_ID + '" class="custom_btn"><span class="icon"><svg id="cc_clear2_' + TABLE_ID + '" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
+
+            let table_opts = {
+                data: tab_data,
+                layout: custom_layout,
+                scrollX: /*[scroll_x*/ true /*scroll_x]*/,
+                scrollY: /*[scroll_y*/ '70vh' /*scroll_y]*/,                   // nowe
+                scrollCollapse: /*[scroll_collapse*/ true /*scroll_collapse]*/, // nowe
+                autoWidth: false,
+                columns: columns,
+                pageLength: 50,
+                responsive: false,
+                order: false,
+                processing: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search in columns:",
+                    sInfoFiltered: "(filtered from _MAX_ total entries) " + clearButton
+                },
+                initComplete: search_info
+            };
+
+            const custom_config_opts = /*[js_opts*/ {} /*js_opts]*/ ;
+            const _PAGING_WARN_LIMIT = /*[paging_warn_limit*/ 500 /*paging_warn_limit]*/ ;
+
+            if (custom_config_opts && Object.keys(custom_config_opts).length > 0) {
+                deepMerge(table_opts, custom_config_opts);
+            }
+
+            /*[ajax_js*/
+            // ----- AJAX mode (render_ajax): rows are fetched at runtime -----
+            // render() strips this region (and the small one in the ready
+            // handler below) from its output; render_ajax() keeps it alive
+            // and bakes the endpoint configuration into the inner tags.
+            const data_url = /*[data_url*/ null /*data_url]*/ ;
+            const BTN_LABEL = /*[button_label*/ "Load data" /*button_label]*/ ;
+            const AUTOLOAD = /*[autoload*/ false /*autoload]*/ ;
+            const FETCH_OPTS = /*[fetch_opts*/ {} /*fetch_opts]*/ ;
+            // same-origin credentials by default; FETCH_OPTS may override anything
+            const fetch_init = Object.assign({ credentials: "same-origin" }, FETCH_OPTS);
+            const SPINNER = '<span class="dt-ajax-spinner"></span>';
+            let _table = null;    // DataTable instance once built
+            let _loaded = false;  // first load done?
+            let _loading = false; // fetch in progress?
+
+            const normalize_payload = function(payload) {
+                // bare array of rows, or {"data": [...]} (DataTables ajax style)
+                if (Array.isArray(payload)) return payload;
+                if (payload && Array.isArray(payload.data)) return payload.data;
+                throw new Error("Unsupported data format: expected an array of rows or an object with a 'data' array");
+            };
+
+            // state: "" (idle/done) | "loading" (pulsing) | "error"
+            const set_status = function(html, state) {
+                const el = document.getElementById("dt_ajax_status_" + TABLE_ID);
+                if (!el) return;
+                el.innerHTML = html;
+                el.className = "dt-ajax-status" +
+                    (state === "error" ? " dt-ajax-error" : "") +
+                    (state === "loading" ? " dt-ajax-loading" : "");
+            };
+
+            const load_data = function() {
+                if (_loading) return; // guard: no double fetch (double click, retries)
+                _loading = true;
+                const btn = document.getElementById("dt_ajax_btn_" + TABLE_ID);
+                if (btn) btn.disabled = true;
+                set_status(SPINNER + "Loading data&#8230;", "loading");
+
+                fetch(data_url, fetch_init)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error("HTTP " + response.status + " " + response.statusText);
+                        }
+                        // text() first: on JSON.parse errors retry with bare
+                        // NaN/Infinity tokens replaced by null (endpoints that
+                        // do not sanitize non-finite floats).
+                        return response.text();
+                    })
+                    .then(text => {
+                        let payload;
+                        try {
+                            payload = JSON.parse(text);
+                        } catch (e) {
+                            payload = JSON.parse(text.replace(/\bNaN\b|\bInfinity\b/g, "null"));
+                        }
+                        const rows = normalize_payload(payload);
+                        if (_loaded && _table) {
+                            // reload: swap the rows in the existing table
+                            _table.clear();
+                            _table.rows.add(rows);
+                            _table.draw();
+                        } else {
+                            _table = build_table(rows);
+                            _loaded = true;
+                            const tbl = document.getElementById(TABLE_ID);
+                            if (tbl) tbl.classList.add("dt-ajax-fadein");
+                        }
+                        set_status("Loaded <strong>" + rows.length.toLocaleString() + "</strong> rows.", "");
+                        if (btn) btn.style.display = "none";
+                    })
+                    .catch(err => {
+                        console.error("[df2tables] ajax load failed:", err);
+                        set_status("Failed to load data: " + err.message, "error");
+                        if (btn) {
+                            btn.disabled = false; // click the button to retry
+                        } else {
+                            // autoload mode has no button - add a retry one (only once)
+                            const bar = document.getElementById("dt_ajax_bar_" + TABLE_ID);
+                            if (bar && !bar.querySelector(".dt-ajax-retry")) {
+                                const retry = document.createElement("button");
+                                retry.className = "dt-ajax-btn dt-ajax-retry";
+                                retry.textContent = "Retry";
+                                retry.addEventListener("click", load_data);
+                                bar.appendChild(retry);
+                            }
+                        }
+                    })
+                    .finally(() => {
+                        _loading = false;
+                    });
+            };
+
+            const wire_async_loader = function() {
+                // The loader bar is anchored to the table element itself, so it
+                // works both in the full page and in inline fragments.
+                const table_el = document.getElementById(TABLE_ID);
+                if (!table_el) return;
+                const bar = document.createElement("div");
+                bar.id = "dt_ajax_bar_" + TABLE_ID;
+                bar.style.cssText = "margin: .25rem 0 .5rem;";
+                if (AUTOLOAD) {
+                    // no button: a subtle pulsing "Loading data..." indicator
+                    bar.innerHTML =
+                        '<div id="dt_ajax_status_' + TABLE_ID + '" class="dt-ajax-status"></div>';
+                } else {
+                    bar.innerHTML =
+                        '<button id="dt_ajax_btn_' + TABLE_ID + '" class="dt-ajax-btn">' + BTN_LABEL + "</button>" +
+                        '<div id="dt_ajax_status_' + TABLE_ID + '" class="dt-ajax-status"></div>';
+                }
+                table_el.insertAdjacentElement("beforebegin", bar);
+                if (!AUTOLOAD) {
+                    document.getElementById("dt_ajax_btn_" + TABLE_ID)
+                        .addEventListener("click", load_data);
+                } else {
+                    load_data();
+                }
+            };
+            /*ajax_js]*/
+
+            const build_table = function(rows) {
+                const data = rows || tab_data;
+
+                // Warn before building the table when paging is disabled on a
+                // large dataset (covers embedded AND fetched rows).
+                if (custom_config_opts && Object.keys(custom_config_opts).length > 0 &&
+                    table_opts.paging === false && data.length > _PAGING_WARN_LIMIT) {
+                    const warn = document.createElement("div");
+                    warn.innerHTML =
+                        "<strong>⚠ Performance warning</strong> — " +
+                        "<strong>" + data.length.toLocaleString() + "</strong> rows loaded into the DOM at once. " +
+                        "Sorting, filtering and scrolling will all be slower. " +
+                        "<br><em>Tip: drop <code>paging: false</code> and set " +
+                        "<code>pageLength: 1000</code> instead — only 1000 rows in the DOM at a time, " +
+                        "full data still searchable.</em> " +
+                        "<button onclick=\"this.parentNode.remove()\" " +
+                        "style=\"float:right;border:none;background:none;cursor:pointer;font-size:1rem\">&#x2715;</button>";
+                    warn.style.cssText = "background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #e6a817;color:#664d03;font-size:.875rem;margin-bottom:.5rem;padding:.5rem .75rem;position:relative";
+                    const host = document.getElementById(TABLE_ID);
+                    if (host) host.insertAdjacentElement("beforebegin", warn);
+                }
+
+                // Copy the opts so DataTables does not mutate our table_opts
+                // (DT removes `data` from the object it is given).
+                const init_opts = Object.assign({}, table_opts, { data: data });
+                let table = $("#" + TABLE_ID).DataTable(init_opts);
+                $(document).on("click", "#cc_clear_" + TABLE_ID, e => {
+                    e.preventDefault();
+                    try {
+                        table.search("").columns().columnControl.searchClear().draw();
+                    } catch (err) {
+                        console.log(err);
+                        table.search("").draw();
+                    }
+                });
+                return table;
+            };
+
+            $(document).ready(function() {
+                /*[ajax_js*/
+                if (data_url) {
+                    // AJAX mode: wire the loader; the table is built after the
+                    // first fetch completes.
+                    wire_async_loader();
+                    return;
+                }
+                /*ajax_js]*/
+                build_table();
+            });
+        })();
+        
+    </script> <!--min_content]-->
+</body>
+</html>
