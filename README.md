@@ -63,7 +63,7 @@ output_path = df2t.render_sample_df(to_file="sample_table.html")
 # Polars sample instead of the pandas default
 output_path = df2t.render_sample_df(df_type="polars", to_file="sample_table_pl.html")
 ```
-*The underlying generator, `get_sample_df(df_type="pandas", size=50)`, is also available directly if you just want the sample DataFrame without rendering it.*
+*The underlying generator, `get_sample_df(df_type="pandas", size=50, seed=None)`, is also available directly if you just want the sample DataFrame without rendering it - pass `seed=<int>` for a reproducible frame.*
 
 ### Rendering in notebook
 ```python
@@ -126,6 +126,8 @@ df2t.render(
 - `scroll_x` (bool): Enable horizontal scrolling (default: True)
 - `scroll_y` (str | None): Vertical scrolling height, e.g. `"70vh"`; set to `None` to disable (default: "70vh")
 - `scroll_collapse` (bool): Collapse the container height when there are fewer rows than `scroll_y` (default: True)
+- `list_preview` (int): How many elements of a list/dict cell are shown in its basic preview before the tail is elided (default: 5)
+- `paging_warn_limit` (int | None): Row-count threshold for the in-page performance warning when paging is disabled; `None` keeps the template default (500) (default: None)
 
 **Returns:**
 
@@ -265,7 +267,8 @@ The endpoint at `data_url` should return JSON in one of two shapes: a bare array
 df2t.to_js_array(
     df: pd.DataFrame | pl.DataFrame,
     precision: int = 2,
-    raw: bool = False
+    raw: bool = False,
+    list_preview: int = 5
 ) -> Union[str, list]
 ```
 
@@ -275,14 +278,15 @@ Converts a pandas/polars DataFrame to a JavaScript array-of-arrays (strict JSON)
 
 - `df`: pandas or polars DataFrame
 - `precision`: rounding precision for float columns, same meaning as in `render()` (default: 2)
-- `raw`: if `True`, returns the plain (already NaN/inf-cleaned) Python list of lists instead of a JSON string - convenient for frameworks that JSON-encode the response themselves, e.g. Flask's `jsonify()` (default: False)
+- `raw`: if `True`, returns the plain (already labelled) Python list of lists instead of a JSON string - convenient for frameworks that JSON-encode the response themselves, e.g. Flask's `jsonify()` (default: False)
+- `list_preview`: how many elements of a list/dict cell are shown in its basic preview (default: 5)
 
 **Returns:**
 
 - `str`: JSON string like `'[[1,"a",3.5],[2,"b",4.1]]'` (default)
 - `list`: the underlying list of lists, when `raw=True`
 
-`NaN`/`inf` float values are always converted to `null`/`None`, so the result always round-trips through `JSON.parse()` / `jsonify()` without error.
+Missing values of every flavour (`None`, `pd.NA`, `NaT`, ...) carry the single `"NA"` label; non-finite floats keep their names (`"NaN"`, `"inf"`, `"-inf"`). List/dict cells show a bounded basic preview like `'[0, 1, 2, 3, 4, ...]'`. No bare `NaN`/`Infinity` token is ever emitted, so the result always round-trips through `JSON.parse()` / `jsonify()` without error.
 
 **Example (Flask):**
 
@@ -310,7 +314,7 @@ except (ValueError, TypeError, FileNotFoundError, RuntimeError, OSError) as e:
     print(f"Could not render table: {e}")
 ```
 
-Only genuinely unknown keyword arguments are non-fatal - they emit a `UserWarning` and are ignored rather than raising.
+Only genuinely unknown keyword arguments are non-fatal - they emit a `UserWarning` and are ignored rather than raising. Unknown `render_opts` keys likewise emit a `UserWarning` and have no effect.
 
 ### Deprecated Arguments
 
@@ -318,7 +322,7 @@ The following are kept for backward compatibility but will be removed in a futur
 
 - `load_column_control` and `display_logo` as direct keyword arguments to `render()` / `render_ajax()` - pass them inside `render_opts={...}` instead
 - `num_html` - renamed to `format_negatives`; pass `format_negatives=...` instead
-- `load_datatables()` - a no-op kept for old imports; it hasn't been needed since v0.1.8
+- `load_datatables()` - **removed** (it was a no-op and hasn't been needed since v0.1.8); any remaining import of it now fails - just delete it
 
 ## Configure DataTables directly from Python using `js_opts`
 
