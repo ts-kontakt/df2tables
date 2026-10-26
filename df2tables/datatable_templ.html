@@ -93,18 +93,33 @@ table.dataTable td {
     white-space: nowrap;
     }
 
-    /* Header Styling */
-    span.dt-column-title {
+    /* Header Styling (the column title is a span in DataTables 2, a div in 3) */
+    .dt-column-title {
     font-size: 13px;
     font-weight: 600;
     line-height: 1.1;
     white-space: break-spaces;
     }
 
+    /* DataTables 3 adds its own sort arrows (div.dt-column-order) to every
+       header cell - on top of the ColumnControl order button. Hidden so the
+       columns keep their pre-v3 width (8px widget + 4px flex gap per column).
+       Ordering still works: the click/keypress listener is on the header cell
+       itself and ColumnControl's order button remains as the visible control. */
+    table.dataTable .dt-column-order {
+    display: none;
+    }
+
     /* Input Styling */
     .dt-input {
     border-radius: 6px;
     transition: all 0.2s ease-in-out;
+    }
+
+    /* entries-per-page select: keep it as compact as the toolbar buttons */
+    .dt-length select.dt-input {
+    padding: 0.2rem 0.5rem !important;
+    line-height: 1.2 !important;
     }
 
     input.dt-input:not(:placeholder-shown) {
@@ -137,6 +152,7 @@ table.dataTable td {
     /* Buttons */
     div.dt-buttons {
     margin-right: 1rem;
+    align-items: center;
     }
 
     button.dt-button {
@@ -275,24 +291,21 @@ table.dataTable td {
     </style><!--[scripts-->
     <!-- CSS -->
     <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css"><!-- Extensions CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
-    <!-- jQuery -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/3.1.4/css/dataTables.dataTables.min.css" integrity="sha384-IkYzSBi8dm4Cg6IWFobByqhtleZ+PI1q8HYZXz9QgfRw+9LiJ3uVKcGDIWZFa+0k" crossorigin="anonymous"><!-- Extensions CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/4.1.2/css/buttons.dataTables.min.css" integrity="sha384-DlajTtrz6QWl1tuHlioDLrxOdCLcs/fKhsl1IIKFoarjb+wvu84wtazdfEsNLNpO" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/3.1.2/css/colReorder.dataTables.min.css" integrity="sha384-BoHAO1+Cm4MbQ5dK2SooWY0ynsjjABcetMCsLKARvR8c7bESMreZ/j551/hnnK9n" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/2.1.2/css/columnControl.dataTables.min.css" integrity="sha384-6J0Yn5VflAFZlwwk6LE8FtuppORLtNUl3VhRACLvSgnqT8GA0XA2VTIgkIyf/piJ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/6.1.1/css/fixedColumns.dataTables.min.css" integrity="sha384-E6DA5a374pncwNfU7fXSUW8i+e8NpV6O9uLAk46lYM6eMyzIvWogJ4lavgj9UYSN" crossorigin="anonymous">
+    <!-- DataTables core (v3 is dependency free - no jQuery needed) -->
 
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script><!-- DataTables core -->
+    <script src="https://cdn.datatables.net/3.1.4/js/dataTables.min.js" integrity="sha384-Lg8qwUDhp1uuDJinT3SMR9sxQyVjC/2NPPFkbPahEVgqBRrWGI6zfmrgPYTaVgrS" crossorigin="anonymous"></script><!-- Buttons -->
 
-    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script><!-- Buttons -->
+    <script src="https://cdn.datatables.net/buttons/4.1.2/js/dataTables.buttons.min.js" integrity="sha384-6XJm6yvMgGW3Vi8lCMi02aAI35eZ1syl8TQ8UovEVyHxaYv65hcG9XQG3CGMaK52" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/buttons/4.1.2/js/buttons.html5.min.js" integrity="sha384-fo+TDvjtTcPEonjFXot7gjnBnVBliAxjxO7Et2INICR8O9P0KWV3Cs+Et3KYeVdD" crossorigin="anonymous"></script>
 
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script><!-- Column / table extensions -->
-
-    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
+    <script src="https://cdn.datatables.net/colreorder/3.1.2/js/dataTables.colReorder.min.js" integrity="sha384-vgZhOHeQkuIIv58qI5Iv24ohycjWBEMV95ScBiBcI47BWQjWMx7+ikxYvIdh/hUs" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/columncontrol/2.1.2/js/dataTables.columnControl.min.js" integrity="sha384-w4xGD4Wd38z0wwe63unidRa52DFkhBipcbjO1jHzLA5naorG/T97Xh9ffmEBwlWw" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/6.1.1/js/dataTables.fixedColumns.min.js" integrity="sha384-nRrn6dcIcl6pleyRL0cbKOaJGLyFGtTg6ZHdVaDSrtuQixTkAkpyNhk6yie+hV+d" crossorigin="anonymous"></script>
     <!--scripts]-->
     <!--head]-->
 </head>
@@ -316,32 +329,35 @@ table.dataTable td {
         </figure><!--datatables_logo]-->
     </div><!--[min_content-->
     <script type="text/javascript">
-        /* global DataTable, $, jQuery  */
+        /* global DataTable */
         (function() {
             /* https://datatables.net/extensions/columncontrol/examples/styling/alignmentHeaderOnly.html */
             DataTable.type("num", "className", "dt-body-right");
             DataTable.type("num-fmt", "className", "dt-body-right");
             DataTable.type("date", "className", "dt-body-right");
 
-            if (DataTable.ColumnControl) {
+            if (DataTable.ColumnControl && DataTable.ColumnControl.Button) {
                 const active_funnel = '<svg id="funnel_menu_a" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3 -3 30 30" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-icon lucide-funnel"> <rect x="-4" y="-4" width="32" height="32" fill="#0B57D0"/> <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/> </svg> ';
                 const inactive_funnel = '<svg xmlns="http://www.w3.org/2000/svg" id="funnel_menu_p" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-filter-icon lucide-list-filter"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg>';
 
                 DataTable.ColumnControl.icons["menu"] = inactive_funnel;
                 DataTable.ColumnControl.Button.prototype._checkActive = function() {
-                    var curr_icon = this._dom.icon.innerHTML || "";
-                    if (this._s.active === true || Object.values(this._s.activeList).includes(true)) {
+                    /* Port for ColumnControl 2.x: the stock _checkActive() now also
+                       re-renders the icon (this._s.icon / this._s.iconActive); here the
+                       "menu" icon is the custom funnel and shows the active state. */
+                    var is_active = this._s.active === true || Object.values(this._s.activeList).includes(true);
+                    var icon = is_active && this._s.iconActive ? this._s.iconActive : this._s.icon;
+                    if (is_active) {
                         this._dom.state.innerHTML = DataTable.ColumnControl.icons.tick;
                         this._dom.button.classList.add("dtcc-button_active");
-                        if (curr_icon.includes("funnel_menu")) {
-                            this._dom.icon.innerHTML = active_funnel;
-                        }
                     } else {
                         this._dom.state.innerHTML = "";
                         this._dom.button.classList.remove("dtcc-button_active");
-                        if (curr_icon.includes("funnel_menu")) {
-                            this._dom.icon.innerHTML = inactive_funnel;
-                        }
+                    }
+                    if (icon) {
+                        this._dom.icon.innerHTML = icon === "menu"
+                            ? (is_active ? active_funnel : inactive_funnel)
+                            : (DataTable.ColumnControl.icons[icon] || "");
                     }
                     return this;
                 };
@@ -370,7 +386,7 @@ table.dataTable td {
                 return a;
             }
 
-            jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+            Object.assign(DataTable.ext.type.order, {
                 "num-html-pre": function(a) {
                     var x = String(a).replace(/<[\s\S]*?>/g, "");
                     return parseFloat(_anyNumber(x));
@@ -392,43 +408,63 @@ table.dataTable td {
                     if (search_msg.length > 150) {
                         search_msg = search_msg.slice(0, 150) + "...";
                     }
-                    const searchNote = $("<span>").css({
-                        margin: "0.5rem",
-                        "font-size": "0.7rem",
-                        "font-style": "italic",
-                        display: "inline-flex",
-                        color: "#667"
-                    }).text(search_msg);
-                    $("#" + TABLE_ID + "_wrapper .dt-search input.dt-input").after(searchNote);
+                    const searchNote = document.createElement("span");
+                    searchNote.style.cssText = "margin: 0.5rem; font-size: 0.7rem; font-style: italic; display: inline-flex; color: #667";
+                    searchNote.textContent = search_msg;
+                    const searchInput = document.querySelector("#" + TABLE_ID + "_wrapper .dt-search input.dt-input");
+                    if (searchInput) {
+                        searchInput.insertAdjacentElement("afterend", searchNote);
+                    }
                 }
 
                 if (add_expand_btn) {
                     var dn_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>';
                     var up_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5e5c64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-up"><path d="m18 15-6-6-6 6"/></svg>';
                     var expand_butt = '<button class="custom_btn" type="button" title="Show tools"><span class="icon">' + dn_icon + "</span></button>";
-                    var tools = $("<span>").css({
-                        display: "flex",
-                        right: "",
-                        "font-size": "11px"
-                    }).html(expand_butt);
+                    var tools = document.createElement("span");
+                    tools.style.cssText = "display: flex; font-size: 11px";
+                    tools.innerHTML = expand_butt;
 
-                    $("#" + TABLE_ID + "_info").before(tools);
-                    $("#" + TABLE_ID + "_wrapper").find("div.dt-buttons").hide();
-                    $("#" + TABLE_ID + "_wrapper").find("div.dt-length").hide();
+                    const infoEl = document.getElementById(TABLE_ID + "_info");
+                    if (infoEl) {
+                        infoEl.insertAdjacentElement("beforebegin", tools);
+                    }
+                    const tools_boxes = function() {
+                        // Fresh lookups on every call, like the old jQuery find()
+                        const wrapper_el = document.getElementById(TABLE_ID + "_wrapper");
+                        return {
+                            btns: wrapper_el ? wrapper_el.querySelector("div.dt-buttons") : null,
+                            length: wrapper_el ? wrapper_el.querySelector("div.dt-length") : null
+                        };
+                    };
+                    const toggle_box = function(el) {
+                        if (el) {
+                            el.style.display = el.style.display === "none" ? "" : "none";
+                        }
+                    };
+                    // Tools stay hidden until the expand button is clicked
+                    const initial_boxes = tools_boxes();
+                    if (initial_boxes.btns) {
+                        initial_boxes.btns.style.display = "none";
+                    }
+                    if (initial_boxes.length) {
+                        initial_boxes.length.style.display = "none";
+                    }
 
-                    tools.on("click", function(event) {
+                    tools.addEventListener("click", function(event) {
                         event.preventDefault();
-                        $("#" + TABLE_ID + "_wrapper").find("div.dt-buttons").toggle();
-                        $("#" + TABLE_ID + "_wrapper").find("div.dt-length").toggle();
-                        var iconSpan = $(this).find(".icon");
-                        var button = $(this).find(".custom_btn");
-                        var isDown = iconSpan.html().indexOf("chevron-down") !== -1;
+                        const boxes = tools_boxes();
+                        toggle_box(boxes.btns);
+                        toggle_box(boxes.length);
+                        var iconSpan = tools.querySelector(".icon");
+                        var button = tools.querySelector(".custom_btn");
+                        var isDown = iconSpan.innerHTML.indexOf("chevron-down") !== -1;
                         if (isDown) {
-                            iconSpan.html(up_icon);
-                            button.attr("title", "Hide tools");
+                            iconSpan.innerHTML = up_icon;
+                            button.setAttribute("title", "Hide tools");
                         } else {
-                            iconSpan.html(dn_icon);
-                            button.attr("title", "Show tools");
+                            iconSpan.innerHTML = dn_icon;
+                            button.setAttribute("title", "Show tools");
                         }
                     });
                 }
@@ -529,7 +565,7 @@ table.dataTable td {
                 top1Start: "info",
                 top2Start: search_val,
                 topStart: ["pageLength", {
-                    buttons: ["colvis", "copy"]
+                    buttons: ["copy"]
                 }],
                 topEnd: null,
                 bottomStart: "paging",
@@ -548,6 +584,34 @@ table.dataTable td {
             } else {
                 DataTable.type("num", "render", DataTable.render.number(thousands, decimal, render_precision));
             }
+
+            // The "copy" button writes the DISPLAYED text (with a '.'
+            // decimal) to the clipboard. The radio next to the button picks
+            // the decimal separator for numeric fields - dates, text and
+            // other cells stay untouched.
+            const copy_sep_form = '<span style="margin-left: 0.5rem; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0.1rem;">' +
+                '<span style="font-size: 0.6rem; font-style: italic; color: #667;">Decimal separator</span>' +
+                '<form title="Decimal separator in copied text" style="display: inline-flex; gap: 0.5rem; align-items: center; font-size: 11px;">' +
+                '<label style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer;">' +
+                '<input type="radio" name="copy_sep_' + TABLE_ID + '" value="." checked> (<span style="font-family: Consolas, monospace; font-size: 13px;">.</span>) dot</label>' +
+                '<label style="display: inline-flex; align-items: center; gap: 0.2rem; cursor: pointer;">' +
+                '<input type="radio" name="copy_sep_' + TABLE_ID + '" value=","> (<span style="font-family: Consolas, monospace; font-size: 13px;">,</span>) comma</label>' +
+                "</form></span>";
+
+            const add_copy_sep_form = function() {
+                const copy_btn = document.querySelector("#" + TABLE_ID + "_wrapper button.buttons-copy");
+                if (copy_btn) {
+                    copy_btn.insertAdjacentHTML("afterend", copy_sep_form);
+                }
+            };
+
+            DataTable.ext.buttons.copyHtml5.customize = function(text) {
+                const checked = document.querySelector('input[name="copy_sep_' + TABLE_ID + '"]:checked');
+                const sep = checked ? checked.value : ".";
+                return text.replace(/(^|[\t\r\n])(-?\d+)\.(\d+)(?=$|[\t\r\n])/gm, function(match, pre, int_part, frac_part) {
+                    return pre + int_part + sep + frac_part;
+                });
+            };
 
             const clearButton = '<button id="cc_clear_' + TABLE_ID + '" class="custom_btn"><span class="icon"><svg id="cc_clear2_' + TABLE_ID + '" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-funnel-x-icon lucide-funnel-x"><path d="M12.531 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14v6a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341l.427-.473"/><path d="m16.5 3.5 5 5"/><path d="m21.5 3.5-5 5"/></svg></span>Clear all</button>';
 
@@ -568,7 +632,10 @@ table.dataTable td {
                     searchPlaceholder: "Search in columns:",
                     sInfoFiltered: "(filtered from _MAX_ total entries) " + clearButton
                 },
-                initComplete: search_info
+                initComplete: function() {
+                    search_info();
+                    add_copy_sep_form();
+                }
             };
 
             const custom_config_opts = /*[js_opts*/ {} /*js_opts]*/ ;
@@ -724,8 +791,12 @@ table.dataTable td {
                 // Copy the opts so DataTables does not mutate our table_opts
                 // (DT removes `data` from the object it is given).
                 const init_opts = Object.assign({}, table_opts, { data: data });
-                let table = $("#" + TABLE_ID).DataTable(init_opts);
-                $(document).on("click", "#cc_clear_" + TABLE_ID, e => {
+                let table = new DataTable(document.getElementById(TABLE_ID), init_opts);
+                document.addEventListener("click", function(e) {
+                    const btn = e.target && e.target.closest ? e.target.closest("#cc_clear_" + TABLE_ID) : null;
+                    if (!btn) {
+                        return;
+                    }
                     e.preventDefault();
                     try {
                         table.search("").columns().columnControl.searchClear().draw();
@@ -737,7 +808,18 @@ table.dataTable td {
                 return table;
             };
 
-            $(document).ready(function() {
+            // jQuery-free document.ready equivalent: runs right away when the
+            // document is already parsed (inline fragments), on DOMContentLoaded
+            // otherwise.
+            function on_ready(fn) {
+                if (document.readyState === "loading") {
+                    document.addEventListener("DOMContentLoaded", fn);
+                } else {
+                    fn();
+                }
+            }
+
+            on_ready(function() {
                 /*[ajax_js*/
                 if (data_url) {
                     // AJAX mode: wire the loader; the table is built after the

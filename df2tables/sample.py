@@ -139,7 +139,7 @@ def render_sample_df(df_type="pandas", to_file="df_table.html"):
         title=f"Example <b>{df_type.capitalize()}</b> DataFrame",
         precision=3,
         format_negatives=["measurement"],
-        buttons=["colvis", "copy", "excel"],
+        buttons=["copy", "excel"],
         render_opts={
             "locale_fmt": False,
             "unique_id": 1,

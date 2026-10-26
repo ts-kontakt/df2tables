@@ -591,42 +591,63 @@ def _template_text(template_path):
         ) from e
 
 
-def _render_html_template(template_path, template_vars):
-    """
-    Loads and renders the HTML template with provided variables.
+def _contains_tag(template, tag_id):
+    """Whether the original template contains either marker for tag_id."""
+    return any(
+        marker in template
+        for marker in (
+            f"<!--[{tag_id}-->", f"<!--{tag_id}]-->",
+            f"/*[{tag_id}*/", f"/*{tag_id}]*/",
+        )
+    )
 
-    comnt.render() runs in strict mode: a template_vars key without a
-    matching tag in the template raises instead of silently leaving the
-    placeholder comment block in the produced HTML.
 
-    Raises:
-        FileNotFoundError: If the template file does not exist
-        RuntimeError: If the template cannot be read or rendered
-    """
+def _render_html_template(template_path, template_vars, *, strip_ajax=False):
+    """Render once from original template text, never from rendered output."""
     template_str = _template_text(template_path)
+    template_vars = template_vars.copy()
 
+    if strip_ajax:
+        for tag_id in ("ajax_js", "ajax_css"):
+            if _contains_tag(template_str, tag_id):
+                template_vars[tag_id] = ""
+        for tag_id in ("data_url", "button_label", "autoload", "fetch_opts"):
+            template_vars.pop(tag_id, None)
+
+    return _render_html_template_text(template_str, template_vars)
+
+
+def _render_inline_template(template_path, template_vars, add_scripts,
+                            strip_ajax=False):
+    """Select original regions, then substitute them in one render pass."""
+    template_str = _template_text(template_path)
+    scripts = (
+        comnt.get_tag_content("scripts", template_str) if add_scripts else ""
+    )
+    min_content = comnt.get_tag_content("min_content", template_str)
+    fragment_template = min_content
+    replacements = {
+        key: value for key, value in template_vars.items()
+        if key != "table_markup" and _contains_tag(fragment_template, key)
+    }
+    if strip_ajax:
+        for tag_id in ("ajax_js", "ajax_css"):
+            if _contains_tag(fragment_template, tag_id):
+                replacements[tag_id] = ""
+        for tag_id in ("data_url", "button_label", "autoload", "fetch_opts"):
+            replacements.pop(tag_id, None)
+    rendered = _render_html_template_text(fragment_template, replacements)
+    return scripts + template_vars["table_markup"] + rendered
+
+
+def _render_html_template_text(template_str, template_vars):
+    """The common strict rendering step for an already selected template."""
     try:
         return comnt.render(template_str, template_vars, strict=True)
     except Exception as e:
         raise RuntimeError(
             f"Error rendering template: {type(e).__name__}: {e}"
         ) from e
-
-
-def _strip_ajax_blocks(html):
-    """
-    render() does not use the AJAX loader - remove its regions (ajax_js /
-    ajax_css) from the output. render_ajax() generates its variant from the
-    SAME template by simply leaving those regions in place, so there is no
-    second template file to maintain. Custom templates without the regions
-    are fine: a missing tag is not an error here.
-    """
-    for tag in ("ajax_js", "ajax_css"):
-        try:
-            html = comnt.render(html, {tag: ""}, strict=True)
-        except comnt.NotFoundError:
-            pass
-    return html
 
 
 DEPRECATED_ARGS = {
@@ -813,20 +834,24 @@ def _base_template_vars(final_opts, title, precision):
     table_id = final_opts.get("table_id") or DEFAULT_RENDER_OPTS["table_id"]
     if final_opts.get("unique_id"):
         table_id = f"id_{uuid.uuid4().hex}"
+    table_attrs = final_opts.get("_table_attrs")
+    if table_attrs is not None:
+        attrs = dict(table_attrs)
+        table_id = attrs.get("id") or f"dt_{uuid.uuid4().hex[:8]}"
+        attrs["id"] = table_id
+    else:
+        attrs = {
+            "id": table_id,
+            "style": "width:100%;",
+            "class": final_opts.get(
+                "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
+            ),
+        }
 
     template_vars = {
         "title": str(title),
         "table_id": _js_json(table_id),
-        "table_markup": html_tag(
-            "table",
-            attrs={
-                "id": table_id,
-                "style": "width:100%;",
-                "class": final_opts.get(
-                    "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
-                ),
-            },
-        ),
+        "table_markup": html_tag("table", attrs=attrs),
         "scroll_x": _js_json(bool(final_opts.get("scroll_x", True))),
         "scroll_y": _js_json(final_opts.get("scroll_y", "70vh")),
         "scroll_collapse": _js_json(bool(final_opts.get("scroll_collapse", True))),
@@ -908,6 +933,8 @@ def render(
     render_opts=None,
     js_opts=None,
     templ_path=TEMPLATE_PATH,
+    _inline_scripts=None,
+    _table_attrs=None,
     **kwargs,
 ):
     """
@@ -919,7 +946,7 @@ def render(
         startfile: open the generated file in the browser after writing
         precision: rounding precision for float columns
         format_negatives: False / True (auto-detect) / list of original column names
-        buttons: list of DataTables buttons, e.g. ["colvis", "copy", "excel"]
+        buttons: list of DataTables buttons, e.g. ["copy", "csv", "excel"]
         render_opts: dict overriding DEFAULT_RENDER_OPTS
         js_opts: dict of extra DataTables options, deep-merged into table opts
         templ_path: path to the HTML template
@@ -937,6 +964,9 @@ def render(
     final_opts, num_html = _resolve_render_opts(render_opts, kwargs, "render()")
     if num_html is not _UNSET:
         format_negatives = num_html
+    if _table_attrs is not None:
+        final_opts["_table_attrs"] = _table_attrs
+        final_opts["unique_id"] = False
 
     data_arrays, columns_defs, search_columns, df_prepared = _process_dataframe(
         df, precision, final_opts
@@ -954,10 +984,14 @@ def render(
 
     template_vars["js_opts"] = _js_json(_merge_buttons(js_opts, buttons))
 
-    html_content = _render_html_template(templ_path, template_vars)
-    # render() never uses the AJAX loader - strip its regions from the
-    # output (render_ajax() generates its variant from the same template).
-    html_content = _strip_ajax_blocks(html_content)
+    if _inline_scripts is None:
+        html_content = _render_html_template(
+            templ_path, template_vars, strip_ajax=True
+        )
+    else:
+        html_content = _render_inline_template(
+            templ_path, template_vars, _inline_scripts, strip_ajax=True
+        )
     return _emit(html_content, to_file, startfile)
 
 
@@ -990,29 +1024,22 @@ def render_inline(df, table_attrs=None, add_scripts=False, **kwargs):
             "'title' argument is ignored in render_inline - no page title in inline mode"
         )
 
-    # Always render without file output
-    html = render(df, to_file=None, **kwargs)
+    # Choose the final attributes before rendering. Both table markup and
+    # TABLE_ID are filled in the same pass; no rendered HTML is scanned again.
+    render_opts = kwargs.get("render_opts") or {}
     attrs = {
-        "class": DEFAULT_RENDER_OPTS["default_table_class"],
+        "class": render_opts.get(
+            "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
+        ),
         **(table_attrs or {}),
     }
-    if not attrs.get("id"):
-        # Unique per call: two tables on one page must not share a DOM id.
-        attrs["id"] = f"dt_{uuid.uuid4().hex[:8]}"
-
-    base_table = html_tag("table", attrs=attrs)
-
-    # Update JavaScript to reference correct table ID. JSON-encode it:
-    # a hand-built '"%s"' would let an id containing '"' or '</script>'
-    # break out of the JS string / the <script> element.
-    html = comnt.render(html, {"table_id": _js_json(attrs["id"])})
-
-    # Extract minimal content needed for embedding
-    if add_scripts:
-        base_table = comnt.get_tag_content("scripts", html) + base_table
-
-    min_content = base_table + comnt.get_tag_content("min_content", html)
-    return min_content
+    return render(
+        df,
+        to_file=None,
+        _inline_scripts=add_scripts,
+        _table_attrs=attrs,
+        **kwargs,
+    )
 
 
 def to_js_array(df, precision=2, raw=False, list_preview=DEFAULT_LIST_PREVIEW):
@@ -1102,14 +1129,23 @@ def render_ajax(
         raise TypeError(f"data_url must be a str, got {type(data_url).__name__}")
 
     if not full_page:
-        # Inline fragment (default, render_inline-style): every embedded
-        # table needs its own DOM id unless the caller pinned one.
+        # Inline fragment (default): retain the existing AJAX table markup
+        # and id precedence, but choose everything before the render pass.
+        inline_attrs = {
+            "style": "width:100%;",
+            "class": final_opts.get(
+                "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
+            ),
+            **(table_attrs or {}),
+        }
         explicit_id = (render_opts or {}).get("table_id") or (table_attrs or {}).get("id")
         if explicit_id:
-            final_opts["table_id"] = explicit_id
-            final_opts["unique_id"] = False
+            inline_attrs["id"] = explicit_id
         else:
-            final_opts["unique_id"] = True
+            inline_attrs.pop("id", None)
+            inline_attrs["id"] = f"id_{uuid.uuid4().hex}"
+        final_opts["_table_attrs"] = inline_attrs
+        final_opts["unique_id"] = False
 
     # Rows are intentionally NOT materialized here - only columns/search
     # definitions are baked into the page (include_data=False).
@@ -1136,23 +1172,11 @@ def render_ajax(
     if full_page:
         return _emit(html_content, to_file, startfile)
 
-    # --- inline fragment (default), in the spirit of render_inline() ---
-    # The loader CSS travels with the fragment (self-contained look), the
-    # DataTables assets are the host page's job unless add_scripts=True.
-    table_id = json.loads(template_vars["table_id"])
-    fragment = "<style>" + comnt.get_tag_content("ajax_css", html_content) + "</style>"
-    if add_scripts:
-        fragment += comnt.get_tag_content("scripts", html_content)
-    attrs = {
-        "style": "width:100%;",
-        "class": final_opts.get(
-            "default_table_class", DEFAULT_RENDER_OPTS["default_table_class"]
-        ),
-        **(table_attrs or {}),
-        "id": table_id,
-    }
-    fragment += html_tag("table", attrs=attrs)
-    fragment += comnt.get_tag_content("min_content", html_content)
+    # Select and render the original regions once. Marker-like cell values
+    # and table attributes are replacement values, never template syntax.
+    ajax_css = comnt.get_tag_content("ajax_css", _template_text(templ_path))
+    fragment = _render_inline_template(templ_path, template_vars, add_scripts)
+    fragment = "<style>" + ajax_css + "</style>" + fragment
 
     if to_file:
         warnings.warn(
