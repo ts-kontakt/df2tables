@@ -19,22 +19,13 @@ configures - there is no second template file.
       exactly when you open the tab, not on page load.
 
 Run:
-    ~/pyenv/bin/python flask_multiple_tables_ajax.py
+    python flask_multiple_tables_ajax.py
     then open http://127.0.0.1:5057/
 """
 
-import sys
-from pathlib import Path
+from flask import Flask, Response, render_template_string
 
-# Pin the fresh (fixed, 0.3.0) module copy from the test directory.
-# Remove this block to test the df2tables installed in the system.
-_FINAL_DIR = Path("/home/tom/Documents/0_tests/1test-v2")
-if (_FINAL_DIR / "df2tables").is_dir():
-    sys.path.insert(0, str(_FINAL_DIR))
-
-from flask import Flask, Response, render_template_string  # noqa: E402
-
-import df2tables as df2t  # noqa: E402
+import df2tables as df2t
 
 app = Flask(__name__)
 
@@ -53,23 +44,11 @@ PAGE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>df2tables.render_ajax() - two loading modes</title>
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
-    <!-- JS -->
+    <!-- jQuery + jQuery UI drive the tabs widget only. The DataTables
+         assets are NOT hardcoded here: the tab-1 fragment brings them via
+         render_ajax(..., add_scripts=True), so the versions always match
+         the df2tables template. -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
-    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
-
-    <!-- jQuery UI for tabs -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.2/themes/base/jquery-ui.min.css">
     <script src="https://code.jquery.com/ui/1.14.2/jquery-ui.min.js"></script>
 
@@ -252,6 +231,8 @@ PAGE = """<!DOCTYPE html>
 @app.route("/")
 def home():
     """Landing page: tab 1 fragment embedded, tab 2 injected on activation."""
+    # add_scripts=True: the tab-1 fragment also carries the DataTables
+    # CSS/JS assets for the whole page (PAGE has none hardcoded).
     ajax_button = df2t.render_ajax(
         DF_BUTTON,
         data_url="/data/button",
@@ -259,6 +240,7 @@ def home():
         autoload=False,
         precision=2,
         format_negatives=["measurement"],
+        add_scripts=True,
     )
     return render_template_string(
         PAGE,
@@ -271,6 +253,8 @@ def home():
 @app.route("/table-auto")
 def table_auto():
     """Tab 2: inline fragment (default mode) - injected on first activation."""
+    # add_scripts stays False: the assets are already on the page from the
+    # tab-1 fragment; this one is fetched and injected later on.
     return df2t.render_ajax(
         DF_AUTO,
         data_url="/data/auto",
@@ -301,4 +285,4 @@ def data_auto():
 if __name__ == "__main__":
     # Port 5057 to avoid clashing with other apps on 5000.
     # use_reloader=False: the reloader would generate the big DataFrame twice.
-    app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=5057, debug=True, use_reloader=False)

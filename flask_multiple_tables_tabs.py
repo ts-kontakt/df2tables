@@ -1,10 +1,10 @@
 import random
-import uuid
 from datetime import datetime, timedelta
 
-import df2tables
 import pandas as pd
 from flask import Flask, render_template_string
+
+import df2tables
 
 PAGE_TEMPLATE = """
 <!DOCTYPE html>
@@ -14,28 +14,11 @@ PAGE_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>df2tables - Multiple Tables Demo</title>
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/4.0.6/css/fixedHeader.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
-
-    <!-- JS -->
+    <!-- jQuery + jQuery UI drive the tabs widget only. The DataTables
+         assets are NOT hardcoded here: the table 1 fragment brings them
+         via render_inline(..., add_scripts=True), so the versions always
+         match the df2tables template. -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
-    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedheader/4.0.6/js/dataTables.fixedHeader.min.js"></script>
-    <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
-
-    <!-- jQuery UI for tabs -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.2/themes/base/jquery-ui.min.css">
     <script src="https://code.jquery.com/ui/1.14.2/jquery-ui.min.js"></script>
 
@@ -80,9 +63,10 @@ PAGE_TEMPLATE = """
     </style>
 
     <script>
-        // Capture the jQuery instance loaded in <head> (the one with the
-        // jQuery UI plugin) so the tabs keep working even though the
-        // self-contained table in tab 4 re-loads jQuery from the CDN.
+        // Initialise the jQuery UI tabs with the page's jQuery. A table
+        // fragment with add_scripts=True carries only the DataTables assets
+        // (the df2tables template is jQuery-free), so this jQuery and the
+        // jQuery UI tabs stay untouched.
         (function($) {
             $(function() {
                 $("#tabs").tabs();
@@ -167,8 +151,8 @@ PAGE_TEMPLATE = """
                 <h3>Self-Contained Inline Table</h3>
                 <p>Rendered with <code>render_inline(..., add_scripts=True)</code>: the table
                 brings its own <code>&lt;link&gt;</code> and <code>&lt;script&gt;</code> tags
-                (jQuery + DataTables from the CDN), so it works even without the page-level
-                includes used by the other tabs.</p>
+                (DataTables assets from the CDN), so the fragment is fully self-sufficient -
+                it would work even without the assets carried by the table 1 fragment.</p>
                 <ul class="feature-list">
                     <li><strong>Dataset:</strong> small contacts list with clickable <code>mailto:</code> links rendered as HTML</li>
                     <li><strong>add_scripts=True:</strong> CSS/JS dependencies included automatically with the table</li>
@@ -310,12 +294,15 @@ app = Flask(__name__)
 @app.route("/")
 def display_tables():
     """Render four DataFrames, each with a different dataset and configuration."""
-    # Table 1: mixed-type dataset with default styling and column reorder
+    # Table 1: mixed-type dataset with default styling and column reorder.
+    # add_scripts=True: this fragment also carries the DataTables CSS/JS
+    # assets for tabs 1-3 - nothing is hardcoded in PAGE_TEMPLATE.
     table1_html = df2tables.render_inline(
         generate_random_dataframe(),
-        table_attrs={"id": uuid.uuid4().hex, "class": "display"},
+        table_attrs={"class": "display"},
         format_negatives=True,
         render_opts={"reorder": True},
+        add_scripts=True,
     )
 
     # Table 2: sales dataset with custom layout and numeric formatting
@@ -331,7 +318,7 @@ def display_tables():
     table2_html = df2tables.render_inline(
         generate_financial_dataframe(),
         precision=4,
-        table_attrs={"id": uuid.uuid4().hex, "class": "display compact hover"},
+        table_attrs={"class": "display compact hover"},
         format_negatives=["margin", "revenue"],
         js_opts=cfg2,
     )
@@ -349,17 +336,18 @@ def display_tables():
     }
     table3_html = df2tables.render_inline(
         generate_wide_dataframe(),
-        table_attrs={"id": uuid.uuid4().hex, "class": "display"},
+        table_attrs={"class": "display"},
         render_opts={"load_column_control": False},
         js_opts=cfg3,
     )
 
-    # Table 4: self-contained inline table - add_scripts=True brings its own
-    # CSS/JS dependencies (works without the page-level includes)
+    # Table 4: self-contained inline table - add_scripts=True gives it its
+    # own CSS/JS dependencies (a second copy on this page on purpose: the
+    # fragment would work all by itself)
     table4_html = df2tables.render_inline(
         generate_contacts_dataframe(),
         add_scripts=True,
-        table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
+        table_attrs={"class": "display compact"},
         js_opts={"pageLength": 5},
     )
 

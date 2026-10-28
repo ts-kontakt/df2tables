@@ -1,10 +1,10 @@
 import random
-import uuid
 from datetime import datetime, timedelta
 
-import df2tables as df2t
 import pandas as pd
 from flask import Flask, render_template_string
+
+import df2tables as df2t
 
 app = Flask(__name__)
 
@@ -37,25 +37,9 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
             font-size: 0.875rem;
         }
     </style>
-    <!-- CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.8/css/dataTables.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.6/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.1.2/css/colReorder.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/columncontrol/1.2.1/css/columnControl.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/5.0.5/css/fixedColumns.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/4.0.6/css/fixedHeader.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.4.3/css/scroller.dataTables.min.css">
-    <!-- JS -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/2.3.8/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.2.6/js/buttons.colVis.min.js"></script>
-    <script src="https://cdn.datatables.net/colreorder/2.1.2/js/dataTables.colReorder.min.js"></script>
-    <script src="https://cdn.datatables.net/columncontrol/1.2.1/js/dataTables.columnControl.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedcolumns/5.0.5/js/dataTables.fixedColumns.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedheader/4.0.6/js/dataTables.fixedHeader.min.js"></script>
-    <script src="https://cdn.datatables.net/scroller/2.4.3/js/dataTables.scroller.min.js"></script>
+    <!-- DataTables CSS/JS are NOT hardcoded here: the first table fragment
+         (render_inline(..., add_scripts=True)) brings them from the library
+         template, so the versions always match df2tables. -->
 </head>
 <body>
     <h1>Multiple DataFrames</h1>
@@ -92,21 +76,26 @@ def generate_orders_dataframe(num_rows=200):
 @app.route("/")
 def home():
     """Render two sample DataFrames as interactive DataTables."""
-    # Table 1: the bundled sample DataFrame (mixed edge-case data types)
+    # Table 1: the bundled sample DataFrame (mixed edge-case data types).
+    # add_scripts=True: this fragment also carries the DataTables CSS/JS
+    # assets for the whole page - nothing is hardcoded in PAGE_TEMPLATE.
     df1 = df2t.get_sample_df()
     html_table1 = df2t.render_inline(
         df1,
         format_negatives=["value", "measurement"],
-        table_attrs={"id": uuid.uuid4().hex, "class": "display"},
+        table_attrs={"class": "display"},
+        add_scripts=True,
     )
 
     # Table 2: synthetic orders dataset - different column types and
-    # dropdown filters for the low-cardinality columns
+    # dropdown filters for the low-cardinality columns. The assets are
+    # already on the page (table 1), so add_scripts stays False - the
+    # default.
     df2 = generate_orders_dataframe()
     html_table2 = df2t.render_inline(
         df2,
         precision=2,
-        table_attrs={"id": uuid.uuid4().hex, "class": "display compact"},
+        table_attrs={"class": "display compact"},
         js_opts={
             "pageLength": 10,
             "language": {"searchPlaceholder": "Filter orders..."},
